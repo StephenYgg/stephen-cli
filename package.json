@@ -1,0 +1,44 @@
+{
+  "name": "stephen-cli",
+  "version": "0.1.0",
+  "description": "A personal TypeScript CLI for agent-friendly workflows.",
+  "type": "module",
+  "bin": {
+    "stephen-cli": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "cli",
+    "typescript",
+    "agents"
+  ],
+  "author": "Stephen",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "12.4.1",
+    "commander": "14.0.1",
+    "env-paths": "3.0.0",
+    "table": "6.9.0",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "24.9.0",
+    "@vitest/coverage-v8": "4.0.3",
+    "tsup": "8.5.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.3"
+  }
+}
