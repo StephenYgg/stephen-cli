@@ -1,4 +1,5 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, realpathSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import envPaths from 'env-paths';
@@ -42,7 +43,17 @@ export async function defaultConfirm(
 }
 
 /* c8 ignore start */
-if (import.meta.url === `file://${process.argv[1]}`) {
+export function isMainEntrypoint(moduleUrl: string, argv: string[]): boolean {
+  const scriptPath = argv[1];
+
+  if (!scriptPath) {
+    return false;
+  }
+
+  return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(scriptPath);
+}
+
+if (isMainEntrypoint(import.meta.url, process.argv)) {
   const cli = createCli();
   void cli.run(process.argv.slice(2)).then((exitCode) => {
     process.exitCode = exitCode;
