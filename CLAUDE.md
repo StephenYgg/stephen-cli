@@ -25,7 +25,8 @@ This file captures project-specific guidance for contributors and code agents wo
 
 ## `ak` Domain Notes
 
-- Supported env values are `bzy-pre`, `bzy-prod`, `op-pre`, and `op-prod`.
+- Supported env values are `bzy-pre`, `bzy-prod`, `op-pre`, `op-prod`, `gitee`, `github`, and `gitlab`.
+- `env` is still a fixed field on `ak` records, not a separately managed sub-resource.
 - `key` search is prefix-only through a low-sensitivity prefix index.
 - `update` may change metadata fields, but not the key itself.
 - `delete` supports exact lookup by `id` or by `env + key`.

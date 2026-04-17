@@ -25,6 +25,7 @@ Build `stephen-cli` as a modern personal CLI with stable machine-facing behavior
 
 - `id` is `sha1(key)`.
 - `key` is encrypted before persistence.
+- `env` remains a fixed `ak` enum: `bzy-pre`, `bzy-prod`, `op-pre`, `op-prod`, `gitee`, `github`, `gitlab`.
 - default output is JSON.
 - `-t` switches to table output.
 - `--raw-key` is required to display the full key.

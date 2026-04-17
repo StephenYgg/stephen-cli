@@ -34,6 +34,27 @@ describe('addAkRecordInputSchema', () => {
     expect(parsed.key).toBe('op_sk_abcdef123456');
   });
 
+  it('accepts the new built-in platform env values', () => {
+    expect(
+      addAkRecordInputSchema.parse({
+        env: 'gitee',
+        key: 'op_sk_abcdef123456'
+      }).env
+    ).toBe('gitee');
+    expect(
+      addAkRecordInputSchema.parse({
+        env: 'github',
+        key: 'op_sk_abcdef123456'
+      }).env
+    ).toBe('github');
+    expect(
+      addAkRecordInputSchema.parse({
+        env: 'gitlab',
+        key: 'op_sk_abcdef123456'
+      }).env
+    ).toBe('gitlab');
+  });
+
   it('rejects an invalid environment', () => {
     expect(() =>
       addAkRecordInputSchema.parse({

@@ -86,6 +86,11 @@ Supported environments:
 - `bzy-prod`
 - `op-pre`
 - `op-prod`
+- `gitee`
+- `github`
+- `gitlab`
+
+`env` remains a fixed `ak` enum for now. These values belong to `ak` records directly and are not managed as a separate `ak env` resource.
 
 ### Examples
 
@@ -157,7 +162,14 @@ The persisted record shape is conceptually:
 ```ts
 interface AkRecord {
   id: string;              // sha1(key)
-  env: 'bzy-pre' | 'bzy-prod' | 'op-pre' | 'op-prod';
+  env:
+    | 'bzy-pre'
+    | 'bzy-prod'
+    | 'op-pre'
+    | 'op-prod'
+    | 'gitee'
+    | 'github'
+    | 'gitlab';
   userId: string | null;
   userName: string | null;
   email: string | null;

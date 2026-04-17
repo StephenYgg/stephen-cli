@@ -9,6 +9,9 @@ describe('project documentation', () => {
     expect(readme).toContain('stephen-cli');
     expect(readme).toContain('ak');
     expect(readme).toContain('JSON');
+    expect(readme).toContain('gitee');
+    expect(readme).toContain('github');
+    expect(readme).toContain('gitlab');
   });
 
   it('includes agent guidance in AGENTS.md and CLAUDE.md', () => {
@@ -17,7 +20,9 @@ describe('project documentation', () => {
 
     expect(agents).toContain('agent');
     expect(agents).toContain('TDD');
+    expect(agents).toContain('github');
     expect(claude).toContain('stephen-cli');
     expect(claude).toContain('ak');
+    expect(claude).toContain('gitlab');
   });
 });

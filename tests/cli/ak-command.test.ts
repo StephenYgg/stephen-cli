@@ -62,6 +62,22 @@ describe('stephen-cli ak command', () => {
     expect(result.stdout).toContain('"userName": "Stephen"');
   });
 
+  it('accepts github as a valid fixed env value', async () => {
+    const result = await execute([
+      'ak',
+      'add',
+      '-e',
+      'github',
+      '-k',
+      'ghp_abcdef123456',
+      '-n',
+      'Stephen'
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"env": "github"');
+  });
+
   it('shows a table when -t is passed', async () => {
     await execute(['ak', 'add', '-e', 'bzy-pre', '-k', 'op_sk_abcdef123456']);
 

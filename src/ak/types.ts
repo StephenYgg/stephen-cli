@@ -1,4 +1,12 @@
-export const AK_ENVS = ['bzy-pre', 'bzy-prod', 'op-pre', 'op-prod'] as const;
+export const AK_ENVS = [
+  'bzy-pre',
+  'bzy-prod',
+  'op-pre',
+  'op-prod',
+  'gitee',
+  'github',
+  'gitlab'
+] as const;
 
 export type AkEnv = (typeof AK_ENVS)[number];
 

@@ -56,13 +56,29 @@ Supported environments:
 - `bzy-prod`
 - `op-pre`
 - `op-prod`
+- `gitee`
+- `github`
+- `gitlab`
+
+Environment handling decision for the current phase:
+
+- `env` remains a fixed enum, not a separately managed resource
+- `gitee`, `github`, and `gitlab` are added as built-in platform environments
+- future `ak env ...` management is intentionally deferred until the enum set grows enough to justify a dedicated sub-resource
 
 ### 3.1 Persisted Schema
 
 Recommended persisted schema:
 
 ```ts
-type AkEnv = 'bzy-pre' | 'bzy-prod' | 'op-pre' | 'op-prod';
+type AkEnv =
+  | 'bzy-pre'
+  | 'bzy-prod'
+  | 'op-pre'
+  | 'op-prod'
+  | 'gitee'
+  | 'github'
+  | 'gitlab';
 
 interface AkRecord {
   id: string;               // sha1(normalizedKey)
@@ -604,7 +620,14 @@ Suggested visible columns:
 
 Recommended validation rules:
 
-- `env` must be one of the four supported values
+- `env` must be one of the supported fixed values:
+  - `bzy-pre`
+  - `bzy-prod`
+  - `op-pre`
+  - `op-prod`
+  - `gitee`
+  - `github`
+  - `gitlab`
 - `key` is required for add
 - `key` cannot be empty after trimming
 - `email` should be validated only lightly in V1
@@ -693,6 +716,8 @@ Confirmed V1 decisions for `stephen-cli ak`:
 - Use local SQLite as runtime storage
 - Encrypt `key` before persistence
 - Use `sha1(key)` as the record `id`
+- Keep `env` as a fixed enum for now
+- Extend the fixed enum with `gitee`, `github`, and `gitlab`
 - Support exact lookup by `id`
 - Support exact lookup by `env + key`
 - Support fuzzy query for `userId`, `userName`, `email`, and `phone`
