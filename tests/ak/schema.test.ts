@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { ZodError } from 'zod';
 
 import {
   AK_QUERY_FIELDS,
+  AK_RECOMMENDED_ENVS,
   addAkRecordInputSchema,
   listAkRecordsInputSchema,
   maskKey,
+  normalizeAkEnv,
   normalizeAkKey,
   parseAkQueryFields
 } from '../../src/ak/schema.js';
@@ -34,7 +37,7 @@ describe('addAkRecordInputSchema', () => {
     expect(parsed.key).toBe('op_sk_abcdef123456');
   });
 
-  it('accepts the new built-in platform env values', () => {
+  it('accepts the recommended built-in env values', () => {
     expect(
       addAkRecordInputSchema.parse({
         env: 'gitee',
@@ -55,13 +58,47 @@ describe('addAkRecordInputSchema', () => {
     ).toBe('gitlab');
   });
 
-  it('rejects an invalid environment', () => {
-    expect(() =>
+  it('accepts a custom environment outside the recommended set', () => {
+    expect(
       addAkRecordInputSchema.parse({
-        env: 'prod',
+        env: 'team-a-prod',
         key: 'op_sk_abcdef123456'
-      })
-    ).toThrow();
+      }).env
+    ).toBe('team-a-prod');
+  });
+});
+
+describe('normalizeAkEnv', () => {
+  it('trims whitespace while preserving custom values', () => {
+    expect(normalizeAkEnv('  team-a-prod  ')).toBe('team-a-prod');
+  });
+
+  it('rejects an empty env value', () => {
+    expect(() => normalizeAkEnv('   ')).toThrow('Environment is required.');
+  });
+
+  it('rejects an invalid env format and shows recommended values', () => {
+    expect(() => normalizeAkEnv('team a prod')).toThrow(
+      `Recommended values: ${AK_RECOMMENDED_ENVS.join(', ')}.`
+    );
+  });
+
+  it('surfaces env format problems through the schema parser', () => {
+    let error: unknown;
+
+    try {
+      addAkRecordInputSchema.parse({
+        env: 'team a prod',
+        key: 'op_sk_abcdef123456'
+      });
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    expect(error).toBeInstanceOf(ZodError);
+    expect((error as ZodError).issues[0]?.message).toContain(
+      'Environment must use letters, numbers, ".", "_" or "-".'
+    );
   });
 });
 

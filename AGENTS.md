@@ -4,7 +4,7 @@ This repository is intended to be comfortable for human contributors and predict
 
 ## Mission
 
-Build `stephen-cli` as a modern personal CLI with stable machine-facing behavior, strong tests, and small implementation units that agents can understand quickly.
+Build `stephen` as a modern personal CLI with stable machine-facing behavior, strong tests, and small implementation units that agents can understand quickly.
 
 ## Working Rules
 
@@ -43,4 +43,3 @@ Build `stephen-cli` as a modern personal CLI with stable machine-facing behavior
 
 - Keep `README.md` user-facing.
 - Keep `AGENTS.md` and `CLAUDE.md` implementation-facing.
-- Save design and planning artifacts under `docs/`.

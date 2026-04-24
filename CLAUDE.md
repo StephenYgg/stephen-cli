@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file captures project-specific guidance for contributors and code agents working on `stephen-cli`.
+This file captures project-specific guidance for contributors and code agents working on `stephen`.
 
 ## Project Intent
 
-`stephen-cli` is a personal TypeScript CLI focused on agent-compatible workflows. The current priority is the `ak` command set for local API key management.
+`stephen` is a personal TypeScript CLI focused on agent-compatible workflows. The current priority is the `ak` command set for local API key management.
 
 ## Priority Behaviors
 
@@ -48,7 +48,6 @@ npm run build
 
 When adding commands in the future:
 
-1. Add or update a design doc in `docs/`
-2. Add tests first
-3. Implement domain/service logic
-4. Wire command parsing last
+1. Add tests first
+2. Implement domain/service logic
+3. Wire command parsing last

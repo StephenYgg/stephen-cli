@@ -22,7 +22,7 @@ describe('isMainEntrypoint', () => {
   });
 
   it('matches a linked argv path to the real module path', () => {
-    const root = mkdtempSync(join(tmpdir(), 'stephen-cli-main-'));
+    const root = mkdtempSync(join(tmpdir(), 'stephen-main-'));
     const realDir = join(root, 'real');
     const linkDir = join(root, 'link');
     const realFile = join(realDir, 'index.js');

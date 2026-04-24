@@ -12,7 +12,7 @@ interface CliExecution {
   stdout: string;
 }
 
-describe('stephen-cli ak command', () => {
+describe('stephen ak command', () => {
   let repository: AkRepository;
 
   beforeEach(() => {
@@ -76,6 +76,22 @@ describe('stephen-cli ak command', () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('"env": "github"');
+  });
+
+  it('accepts a custom env value outside the recommended defaults', async () => {
+    const result = await execute([
+      'ak',
+      'add',
+      '-e',
+      'team-a-prod',
+      '-k',
+      'custom_abcdef123456',
+      '-n',
+      'Stephen'
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"env": "team-a-prod"');
   });
 
   it('shows a table when -t is passed', async () => {
@@ -178,11 +194,14 @@ describe('stephen-cli ak command', () => {
     expect(result.stdout).toContain('Stephen Yang');
   });
 
-  it('maps zod validation issues to exit code 2', async () => {
-    const result = await execute(['ak', 'add', '-e', 'wrong-env', '-k', 'op_sk_abcdef123456']);
+  it('maps env validation issues to exit code 2 and shows the recommended values', async () => {
+    const result = await execute(['ak', 'add', '-e', 'wrong env', '-k', 'op_sk_abcdef123456']);
 
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain('"code": "INVALID_ARGUMENT"');
+    expect(result.stderr).toContain(
+      'Recommended values: bzy-pre, bzy-prod, op-pre, op-prod, gitee, github, gitlab'
+    );
   });
 
   it('returns commander exit codes for missing required options', async () => {
@@ -292,6 +311,25 @@ describe('stephen-cli ak command', () => {
     expect(exitCode).toBe(1);
     expect(stderr).toContain('"code": "UNEXPECTED_ERROR"');
     expect(stderr).toContain('Unexpected error.');
+  });
+
+  it('returns explicit exitCode errors without wrapping them as unexpected errors', async () => {
+    const cli = createCli({
+      confirm: async () => true,
+      masterKey,
+      now: () => '2026-04-16T00:00:00.000Z',
+      repository,
+      stderr: () => undefined,
+      stdout: () => {
+        const error = new Error('stop');
+        Object.assign(error, { exitCode: 9 });
+        throw error;
+      }
+    });
+
+    const exitCode = await cli.run(['ak', 'list']);
+
+    expect(exitCode).toBe(9);
   });
 
   it('renders a not-deleted marker when the repository reports a false delete', async () => {

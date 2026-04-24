@@ -1,14 +1,45 @@
 import { z } from 'zod';
 
-import { AK_ENVS, AK_QUERY_FIELDS, type AkQueryField } from './types.js';
+import {
+  AK_QUERY_FIELDS,
+  AK_RECOMMENDED_ENVS,
+  type AkQueryField
+} from './types.js';
 
-const akEnvSchema = z.enum(AK_ENVS);
+const envRecommendationMessage = `Recommended values: ${AK_RECOMMENDED_ENVS.join(', ')}.`;
+const akEnvSchema = z.string().transform((value, context) => {
+  try {
+    return normalizeAkEnv(value);
+  } catch (error) {
+    context.addIssue({
+      code: 'custom',
+      message: (error as Error).message
+    });
+    return z.NEVER;
+  }
+});
 
 export function normalizeAkKey(value: string): string {
   const normalized = value.trim();
 
   if (normalized.length === 0) {
     throw new Error('API key cannot be empty.');
+  }
+
+  return normalized;
+}
+
+export function normalizeAkEnv(value: string): string {
+  const normalized = value.trim();
+
+  if (normalized.length === 0) {
+    throw new Error(`Environment is required. ${envRecommendationMessage}`);
+  }
+
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(normalized)) {
+    throw new Error(
+      `Environment must use letters, numbers, ".", "_" or "-". ${envRecommendationMessage}`
+    );
   }
 
   return normalized;
@@ -65,4 +96,4 @@ export function parseAkQueryFields(value: string | undefined): AkQueryField[] {
   });
 }
 
-export { AK_QUERY_FIELDS };
+export { AK_QUERY_FIELDS, AK_RECOMMENDED_ENVS };

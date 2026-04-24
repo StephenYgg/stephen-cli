@@ -40,6 +40,20 @@ describe('AkService', () => {
     expect(record.id).toBe('fdb441954fd4573a72fb5a52ce359e0d77c3fa0e');
   });
 
+  it('accepts a custom env value and can fetch the record with the same env', () => {
+    service.add({
+      env: 'team-a-prod',
+      key: 'op_sk_custom123456'
+    });
+
+    const record = service.get({
+      env: 'team-a-prod',
+      key: 'op_sk_custom123456'
+    });
+
+    expect(record.env).toBe('team-a-prod');
+  });
+
   it('fails if a record cannot be reloaded after add', () => {
     const brokenService = new AkService({
       masterKey,

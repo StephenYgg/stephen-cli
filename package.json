@@ -1,10 +1,18 @@
 {
-  "name": "stephen-cli",
+  "name": "stephen",
   "version": "0.1.0",
   "description": "A personal TypeScript CLI for agent-friendly workflows.",
+  "homepage": "https://gitee.com/ywmblue/personal-cli",
+  "bugs": {
+    "url": "https://gitee.com/ywmblue/personal-cli/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitee.com/ywmblue/personal-cli.git"
+  },
   "type": "module",
   "bin": {
-    "stephen-cli": "./dist/index.js"
+    "stephen": "dist/index.js"
   },
   "files": [
     "dist"

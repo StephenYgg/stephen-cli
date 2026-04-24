@@ -1,4 +1,4 @@
-export const AK_ENVS = [
+export const AK_RECOMMENDED_ENVS = [
   'bzy-pre',
   'bzy-prod',
   'op-pre',
@@ -8,7 +8,9 @@ export const AK_ENVS = [
   'gitlab'
 ] as const;
 
-export type AkEnv = (typeof AK_ENVS)[number];
+export const AK_ENVS = AK_RECOMMENDED_ENVS;
+
+export type AkEnv = string;
 
 export const AK_QUERY_FIELDS = [
   'userId',

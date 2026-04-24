@@ -6,7 +6,7 @@ describe('project documentation', () => {
   it('documents the project and ak command in README', () => {
     const readme = readFileSync('README.md', 'utf8');
 
-    expect(readme).toContain('stephen-cli');
+    expect(readme).toContain('stephen');
     expect(readme).toContain('ak');
     expect(readme).toContain('JSON');
     expect(readme).toContain('gitee');
@@ -21,8 +21,29 @@ describe('project documentation', () => {
     expect(agents).toContain('agent');
     expect(agents).toContain('TDD');
     expect(agents).toContain('github');
-    expect(claude).toContain('stephen-cli');
+    expect(claude).toContain('stephen');
     expect(claude).toContain('ak');
     expect(claude).toContain('gitlab');
+  });
+
+  it('ignores docs artifacts in git', () => {
+    const gitignore = readFileSync('.gitignore', 'utf8');
+
+    expect(gitignore).toContain('docs/');
+  });
+
+  it('includes basic npm publish metadata', () => {
+    const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      bugs?: { url?: string };
+      homepage?: string;
+      repository?: { type?: string; url?: string };
+    };
+    const license = readFileSync('LICENSE', 'utf8');
+
+    expect(packageJson.repository?.type).toBe('git');
+    expect(packageJson.repository?.url).toContain('gitee.com/ywmblue/personal-cli.git');
+    expect(packageJson.homepage).toContain('gitee.com/ywmblue/personal-cli');
+    expect(packageJson.bugs?.url).toContain('gitee.com/ywmblue/personal-cli/issues');
+    expect(license).toContain('MIT License');
   });
 });
