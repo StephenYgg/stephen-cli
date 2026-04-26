@@ -15,14 +15,19 @@ import {
   type ConfigKey,
   type StephenCliPaths
 } from './runtime.js';
+import { registerDiskCommands } from '../disk/command.js';
+import { DiskCleanupService } from '../disk/service.js';
+import type { DiskCleanupRuntime, DiskCleanupRoots } from '../disk/runtime.js';
 
 export interface AkCliDependencies {
   confirm: (message: string) => Promise<boolean>;
+  diskRuntime: DiskCleanupRuntime;
   env: NodeJS.ProcessEnv;
   getRepository: () => AkRepository;
   masterKey: Buffer;
   now: () => string;
   paths: StephenCliPaths;
+  resolveDiskCleanupRoots: () => DiskCleanupRoots;
   stderr: (value: string) => void;
   stdout: (value: string) => void;
 }
@@ -114,6 +119,15 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
       now: dependencies.now,
       repository: dependencies.getRepository()
     });
+  const createDiskCleanupService = () => {
+    const roots = dependencies.resolveDiskCleanupRoots();
+
+    return new DiskCleanupService({
+      runtime: dependencies.diskRuntime,
+      systemRoot: roots.systemRoot,
+      userProfileRoot: roots.userProfileRoot
+    });
+  };
 
   program
     .name('stephen')
@@ -128,6 +142,10 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
 
   const ak = program.command('ak').description('Manage API key records.');
   const config = program.command('config').description('Manage local CLI configuration.');
+  registerDiskCommands(program, {
+    createDiskCleanupService,
+    stdout: dependencies.stdout
+  });
 
   ak.command('add')
     .requiredOption('-e, --env <env>', envDescription)
@@ -309,7 +327,9 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
         }
 
         if (isCliError(error)) {
-          dependencies.stderr(`${renderAkErrorAsJson(error.code, error.message)}\n`);
+          dependencies.stderr(
+            `${renderAkErrorAsJson(error.code, error.message, 'details' in error ? error.details : undefined)}\n`
+          );
           return error.exitCode;
         }
 
@@ -334,7 +354,7 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
 
 function isCliError(
   error: unknown
-): error is Pick<AkServiceError, 'code' | 'exitCode' | 'message'> {
+): error is Pick<AkServiceError, 'code' | 'exitCode' | 'message'> & { details?: unknown } {
   return (
     error instanceof Error &&
     'code' in error &&

@@ -14,12 +14,18 @@ import {
   resolveAkDatabasePath,
   type StephenCliPaths
 } from './ak/runtime.js';
+import {
+  createDiskCleanupRuntime,
+  resolveDiskCleanupRoots,
+  type DiskCleanupRuntime
+} from './disk/runtime.js';
 
 /* v8 ignore next */
 const createDefaultReadline = () => createInterface({ input, output });
 
 export interface CreateCliOverrides
   extends Partial<Omit<AkCliDependencies, 'getRepository'>> {
+  diskRuntime?: DiskCleanupRuntime;
   env?: NodeJS.ProcessEnv;
   paths?: StephenCliPaths;
   repository?: AkRepository;
@@ -29,6 +35,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
   const paths = overrides.paths ?? (envPaths('stephen') as StephenCliPaths);
   const runtimeEnv = overrides.env ?? process.env;
   const masterKey = overrides.masterKey ?? Buffer.from('0123456789abcdef0123456789abcdef', 'utf8');
+  const diskRuntime = overrides.diskRuntime ?? createDiskCleanupRuntime();
   let repository = overrides.repository ?? null;
 
   const getRepository = () => {
@@ -55,11 +62,13 @@ export function createCli(overrides: CreateCliOverrides = {}) {
 
   return createAkCli({
     confirm: overrides.confirm ?? defaultConfirm,
+    diskRuntime,
     env: runtimeEnv,
     getRepository,
     masterKey,
     now: overrides.now ?? (() => new Date().toISOString()),
     paths,
+    resolveDiskCleanupRoots: () => resolveDiskCleanupRoots(runtimeEnv),
     stderr: overrides.stderr ?? ((value) => process.stderr.write(value)),
     stdout: overrides.stdout ?? ((value) => process.stdout.write(value))
   });

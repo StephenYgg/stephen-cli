@@ -117,6 +117,24 @@ describe('AkService', () => {
     expect(results[0]?.userName).toBe('Stephen');
   });
 
+  it('lists records with an explicit env filter and no query', () => {
+    service.add({
+      env: 'bzy-pre',
+      key: 'op_sk_abcdef123456'
+    });
+    service.add({
+      env: 'op-prod',
+      key: 'op_sk_zzzzzz123456'
+    });
+
+    const results = service.list({
+      env: 'bzy-pre'
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.env).toBe('bzy-pre');
+  });
+
   it('updates metadata without allowing direct key changes', () => {
     service.add({
       email: 'stephen@example.com',
@@ -258,5 +276,22 @@ describe('AkService', () => {
     });
 
     expect(updated.userName).toBeNull();
+  });
+
+  it('updates phone and userId when they are explicitly supplied', () => {
+    service.add({
+      env: 'bzy-pre',
+      key: 'op_sk_abcdef123456'
+    });
+
+    const updated = service.update({
+      env: 'bzy-pre',
+      key: 'op_sk_abcdef123456',
+      phone: '13800138000',
+      userId: '2001'
+    });
+
+    expect(updated.phone).toBe('13800138000');
+    expect(updated.userId).toBe('2001');
   });
 });

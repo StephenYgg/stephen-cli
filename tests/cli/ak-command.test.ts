@@ -159,7 +159,7 @@ describe('stephen ak command', () => {
     const added = await execute(['ak', 'add', '-e', 'bzy-pre', '-k', 'op_sk_abcdef123456']);
     const parsed = JSON.parse(added.stdout) as { data: { id: string }[] };
 
-    const result = await execute(['ak', 'delete', '--id', parsed.data[0].id, '--yes']);
+    const result = await execute(['ak', 'delete', '--id', parsed.data[0]!.id, '--yes']);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('"ok": true');
@@ -169,7 +169,7 @@ describe('stephen ak command', () => {
     const added = await execute(['ak', 'add', '-e', 'bzy-pre', '-k', 'op_sk_abcdef123456']);
     const parsed = JSON.parse(added.stdout) as { data: { id: string }[] };
 
-    const result = await execute(['ak', 'delete', '--id', parsed.data[0].id, '--yes']);
+    const result = await execute(['ak', 'delete', '--id', parsed.data[0]!.id, '--yes']);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('"id": "');

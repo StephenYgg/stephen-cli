@@ -2,7 +2,9 @@
 
 `stephen` is a personal TypeScript CLI built for agent-friendly workflows first and interactive terminal use second.
 
-The current flagship command is `ak`, a local API key manager with:
+The current flagship command is `ak`, a local API key manager. The CLI also includes a conservative Windows disk cleanup command for low-risk cache cleanup.
+
+`ak` provides:
 
 - SQLite-backed local storage
 - encrypted key persistence
@@ -38,6 +40,14 @@ Key modules for `ak`:
 - `src/ak/service.ts`: orchestration and domain behavior
 - `src/ak/output.ts`: JSON and table rendering
 - `src/ak/command.ts`: Commander-based CLI wiring
+
+Key modules for `disk cleanup`:
+
+- `src/disk/types.ts`: shared report shapes
+- `src/disk/runtime.ts`: filesystem and process integration
+- `src/disk/service.ts`: conservative cleanup orchestration
+- `src/disk/output.ts`: JSON and table rendering
+- `src/disk/command.ts`: Commander-based CLI wiring
 
 ## Getting Started
 
@@ -236,6 +246,52 @@ interface AkRecord {
   updatedAt: string;
 }
 ```
+
+## `disk cleanup` Command
+
+The `disk cleanup` command provides a conservative Windows cleanup workflow aimed at reclaiming cache space without touching high-risk application data.
+
+Current cleanup targets:
+
+- `%USERPROFILE%\AppData\Local\npm-cache`
+- `%USERPROFILE%\AppData\Local\NuGet`
+- `%USERPROFILE%\.cache`
+- `%USERPROFILE%\.m2`
+- `%USERPROFILE%\AppData\Local\Temp`
+- `%SystemRoot%\SoftwareDistribution\Download`
+
+### Examples
+
+Preview cleanup results in JSON:
+
+```bash
+stephen disk cleanup
+```
+
+Apply conservative cleanup:
+
+```bash
+stephen disk cleanup --apply
+```
+
+Apply cleanup and disable Windows hibernation:
+
+```bash
+stephen disk cleanup --apply --disable-hibernate
+```
+
+Render cleanup targets as a table:
+
+```bash
+stephen disk cleanup -t
+```
+
+### Output Rules
+
+- Default output is JSON.
+- `-t` or `--format table` switches to table rendering.
+- Preview mode is the default.
+- `--apply` is required before any cleanup is executed.
 
 ## Verification Standard
 

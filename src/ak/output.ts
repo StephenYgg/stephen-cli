@@ -41,12 +41,13 @@ export function renderAkRecordsAsJson(records: AkRecordView[], limit: number): s
   );
 }
 
-export function renderAkErrorAsJson(code: string, message: string): string {
+export function renderAkErrorAsJson(code: string, message: string, details?: unknown): string {
   return JSON.stringify(
     {
       ok: false,
       error: {
         code,
+        ...(details === undefined ? {} : { details }),
         message
       }
     },

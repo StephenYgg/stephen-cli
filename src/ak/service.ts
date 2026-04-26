@@ -91,15 +91,15 @@ export class AkService {
 
     this.#repository.insert({
       createdAt: now,
-      email: normalizeNullableField(parsed.email),
+      email: normalizeNullableFieldForInsert(parsed.email),
       env: parsed.env,
       id,
       keyCiphertext: encryptAkKey(this.#masterKey, key),
       keySearchPrefix: deriveAkSearchPrefix(key),
-      phone: normalizeNullableField(parsed.phone),
+      phone: normalizeNullableFieldForInsert(parsed.phone),
       updatedAt: now,
-      userId: normalizeNullableField(parsed.userId),
-      userName: normalizeNullableField(parsed.userName)
+      userId: normalizeNullableFieldForInsert(parsed.userId),
+      userName: normalizeNullableFieldForInsert(parsed.userName)
     });
 
     const record = this.#repository.getById(id);
@@ -124,12 +124,13 @@ export class AkService {
   list(input: AkListInput): AkRecordView[] {
     const fields = parseFields(input.field);
     const limit = input.limit ?? 50;
-    const results = this.#repository.list({
-      env: input.env,
+    const filters = {
       fields,
       limit,
-      query: input.query
-    });
+      ...(input.env ? { env: input.env } : {}),
+      ...(input.query ? { query: input.query } : {})
+    };
+    const results = this.#repository.list(filters);
 
     return results.map((record) => this.#toView(record, Boolean(input.rawKey)));
   }
@@ -141,13 +142,17 @@ export class AkService {
       throw new AkServiceError('RECORD_NOT_FOUND', 'No API key record matched the query.', 3);
     }
 
+    const normalizedEmail = normalizeNullableField(input.email);
+    const normalizedPhone = normalizeNullableField(input.phone);
+    const normalizedUserId = normalizeNullableField(input.userId);
+    const normalizedUserName = normalizeNullableField(input.userName);
     const updated = this.#repository.updateMetadata({
-      email: normalizeNullableField(input.email),
+      ...(normalizedEmail === undefined ? {} : { email: normalizedEmail }),
       id: record.id,
-      phone: normalizeNullableField(input.phone),
+      ...(normalizedPhone === undefined ? {} : { phone: normalizedPhone }),
       updatedAt: this.#now(),
-      userId: normalizeNullableField(input.userId),
-      userName: normalizeNullableField(input.userName)
+      ...(normalizedUserId === undefined ? {} : { userId: normalizedUserId }),
+      ...(normalizedUserName === undefined ? {} : { userName: normalizedUserName })
     });
 
     if (!updated) {
@@ -225,6 +230,10 @@ function normalizeNullableField(value: string | null | undefined): string | null
 
   const normalized = value.trim();
   return normalized.length === 0 ? null : normalized;
+}
+
+function normalizeNullableFieldForInsert(value: string | null | undefined): string | null {
+  return normalizeNullableField(value) ?? null;
 }
 
 function parseFields(value: string | undefined): AkQueryField[] {

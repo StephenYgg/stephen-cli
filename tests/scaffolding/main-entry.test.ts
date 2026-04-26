@@ -7,10 +7,19 @@ import { tmpdir } from 'node:os';
 
 describe('isMainEntrypoint', () => {
   it('matches a Windows argv path to the corresponding file URL', () => {
+    const root = mkdtempSync(join(tmpdir(), 'stephen-main-windows-'));
+    const distDir = join(root, 'dist');
+    const distFile = join(distDir, 'index.js');
+
+    mkdirSync(distDir, { recursive: true });
+    writeFileSync(distFile, 'export {};');
+
+    const moduleUrl = new URL(`file:///${distFile.replace(/\\/g, '/')}`).href;
+
     expect(
-      isMainEntrypoint('file:///D:/Development/Stephen/PersonalCli/dist/index.js', [
+      isMainEntrypoint(moduleUrl, [
         'node',
-        'D:\\Development\\Stephen\\PersonalCli\\dist\\index.js'
+        distFile
       ])
     ).toBe(true);
   });

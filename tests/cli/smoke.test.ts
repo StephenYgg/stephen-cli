@@ -24,5 +24,6 @@ describe('stephen smoke tests', () => {
     expect(stdout).toContain('stephen');
     expect(stdout).toContain('ak');
     expect(stdout).toContain('config');
+    expect(stdout).toContain('disk');
   });
 });
