@@ -18,6 +18,8 @@ import {
 import { registerDiskCommands } from '../disk/command.js';
 import { DiskCleanupService } from '../disk/service.js';
 import type { DiskCleanupRuntime, DiskCleanupRoots } from '../disk/runtime.js';
+import { handleVideoCommandError, registerVideoCommands } from '../video/command.js';
+import type { VideoRuntime } from '../video/runtime.js';
 
 export interface AkCliDependencies {
   confirm: (message: string) => Promise<boolean>;
@@ -30,6 +32,7 @@ export interface AkCliDependencies {
   resolveDiskCleanupRoots: () => DiskCleanupRoots;
   stderr: (value: string) => void;
   stdout: (value: string) => void;
+  videoRuntime: VideoRuntime;
 }
 
 export interface AkCliRunner {
@@ -144,6 +147,11 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
   const config = program.command('config').description('Manage local CLI configuration.');
   registerDiskCommands(program, {
     createDiskCleanupService,
+    stdout: dependencies.stdout
+  });
+  registerVideoCommands(program, {
+    runtime: dependencies.videoRuntime,
+    stderr: dependencies.stderr,
     stdout: dependencies.stdout
   });
 
@@ -332,6 +340,16 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
           );
           return error.exitCode;
         }
+
+        const videoExitCode = handleVideoCommandError(error, {
+          stderr: dependencies.stderr
+        });
+
+        /* c8 ignore start */
+        if (videoExitCode !== undefined) {
+          return videoExitCode;
+        }
+        /* c8 ignore end */
 
         if (error instanceof ZodError) {
           dependencies.stderr(

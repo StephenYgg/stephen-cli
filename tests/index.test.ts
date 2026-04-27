@@ -394,4 +394,37 @@ describe('createCli', () => {
     expect(stderr).toContain('"code": "CONFIG_ERROR"');
     expect(stderr).toContain('Unsupported config key');
   });
+
+  it('maps video command failures through the shared CLI error handler', async () => {
+    let stderr = '';
+
+    const cli = createCli({
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stderr: (value) => {
+        stderr += value;
+      },
+      stdout: () => undefined,
+      videoRuntime: {
+        execFile: async () => ({
+          code: 1,
+          stderr: 'ffmpeg not found',
+          stdout: ''
+        }),
+        fetch: async () => ({
+          ok: true,
+          status: 200,
+          text: async () => '',
+          arrayBuffer: async () => new ArrayBuffer(0),
+          headers: new Headers()
+        }),
+        launchBrowserSniffer: async () => [],
+        writeFile: async () => undefined
+      }
+    });
+
+    const exitCode = await cli.run(['video', 'compress', 'D:/videos/input.mov']);
+
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain('"code": "VIDEO_FFMPEG_MISSING"');
+  });
 });

@@ -4,6 +4,8 @@
 
 The current flagship command is `ak`, a local API key manager. The CLI also includes a conservative Windows disk cleanup command for low-risk cache cleanup.
 
+Roadmap work is underway for a new `video` command group focused on browser-assisted media detection, media downloads, and local video compression.
+
 `ak` provides:
 
 - SQLite-backed local storage
@@ -79,6 +81,37 @@ Build the CLI:
 ```bash
 npm run build
 ```
+
+## Roadmap
+
+Planned next major capability: `video`
+
+- `video sniff`: inspect a page or media URL and return candidate downloadable video resources in JSON by default
+- `video download`: download supported media inputs including page URLs, `m3u8` streams, and direct `mp4` links
+- `video compress`: compress local video with `ffmpeg`
+
+Current direction for `video`:
+
+- browser-first detection for sites that only reveal media requests during real page execution
+- HTTP-based fallback detection for simpler pages and direct media links
+- a unified candidate model so `sniff` and `download` can handle `m3u8` and `mp4` consistently
+- `ffmpeg`-backed compression with default `mp4` output, `h265` video, `aac` audio, and `64k` default audio bitrate
+- explicit parameter support for resolution, video bitrate, audio bitrate, concurrency, request headers, and output selection
+
+Planned defaults:
+
+- JSON output first, with optional table mode when it improves readability
+- `video sniff` mode default: `auto`, preferring browser-based detection before HTTP fallback
+- `video compress` output default: `mp4`
+- `video compress` video codec default: `h265`
+- `video compress` audio codec default: `aac`
+- `video compress` audio bitrate default: `64k`
+- resolution unchanged unless the user passes an explicit resize option
+
+Supporting documents:
+
+- [2026-04-27-video-command-solution-report.md](/D:/Development/Stephen/PersonalCli/docs/2026-04-27-video-command-solution-report.md)
+- [2026-04-27-video-command-implementation-plan.md](/D:/Development/Stephen/PersonalCli/docs/2026-04-27-video-command-implementation-plan.md)
 
 ## `ak` Command
 

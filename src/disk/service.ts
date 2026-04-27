@@ -35,7 +35,9 @@ export class DiskCleanupServiceError extends Error {
   constructor(code: string, message: string, exitCode = 2, details?: DiskCleanupErrorDetails) {
     super(message);
     this.code = code;
-    this.details = details;
+    if (details) {
+      this.details = details;
+    }
     this.exitCode = exitCode;
   }
 }
@@ -78,14 +80,14 @@ export class DiskCleanupService {
 
       targets.push({
         action: target.action,
-        error,
         exists: inspection.exists,
         label: target.label,
         path: target.path,
         requiresAdministrator: target.requiresAdministrator,
         sizeBytes: inspection.sizeBytes,
         sizeGB: bytesToGb(inspection.sizeBytes),
-        status
+        status,
+        ...(error ? { error } : {})
       });
     }
 

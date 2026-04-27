@@ -19,6 +19,7 @@ import {
   resolveDiskCleanupRoots,
   type DiskCleanupRuntime
 } from './disk/runtime.js';
+import { createDefaultVideoRuntime, type VideoRuntime } from './video/runtime.js';
 
 /* v8 ignore next */
 const createDefaultReadline = () => createInterface({ input, output });
@@ -29,6 +30,7 @@ export interface CreateCliOverrides
   env?: NodeJS.ProcessEnv;
   paths?: StephenCliPaths;
   repository?: AkRepository;
+  videoRuntime?: VideoRuntime;
 }
 
 export function createCli(overrides: CreateCliOverrides = {}) {
@@ -36,6 +38,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
   const runtimeEnv = overrides.env ?? process.env;
   const masterKey = overrides.masterKey ?? Buffer.from('0123456789abcdef0123456789abcdef', 'utf8');
   const diskRuntime = overrides.diskRuntime ?? createDiskCleanupRuntime();
+  const videoRuntime = overrides.videoRuntime ?? createDefaultVideoRuntime();
   let repository = overrides.repository ?? null;
 
   const getRepository = () => {
@@ -70,7 +73,8 @@ export function createCli(overrides: CreateCliOverrides = {}) {
     paths,
     resolveDiskCleanupRoots: () => resolveDiskCleanupRoots(runtimeEnv),
     stderr: overrides.stderr ?? ((value) => process.stderr.write(value)),
-    stdout: overrides.stdout ?? ((value) => process.stdout.write(value))
+    stdout: overrides.stdout ?? ((value) => process.stdout.write(value)),
+    videoRuntime
   });
 }
 

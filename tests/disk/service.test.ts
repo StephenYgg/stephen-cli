@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { DiskCleanupService, type DiskCleanupRuntime } from '../../src/disk/service.js';
+import { DiskCleanupService, DiskCleanupServiceError, type DiskCleanupRuntime } from '../../src/disk/service.js';
 
 function createRuntime(
   sizes: Record<string, number>,
@@ -204,5 +204,12 @@ describe('DiskCleanupService', () => {
         }
       }
     });
+  });
+
+  it('can construct a disk cleanup error without details', () => {
+    const error = new DiskCleanupServiceError('DISK_CLEANUP_ERROR', 'boom');
+
+    expect(error.code).toBe('DISK_CLEANUP_ERROR');
+    expect(error.details).toBeUndefined();
   });
 });

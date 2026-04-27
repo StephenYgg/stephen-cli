@@ -1,0 +1,107 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "stephen video sniff",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "sniff",
+        "${input:videoUrl}",
+        "--mode",
+        "${input:videoMode}",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "stephen video download",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "download",
+        "${input:videoUrl}",
+        "--mode",
+        "${input:videoMode}",
+        "--output-dir",
+        "${input:videoOutputDir}",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "stephen video compress",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "compress",
+        "${input:videoInputPath}",
+        "--output-path",
+        "${input:videoCompressedOutputPath}",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "videoUrl",
+      "type": "promptString",
+      "description": "Page, m3u8, or mp4 URL",
+      "default": "https://example.com/video.mp4"
+    },
+    {
+      "id": "videoMode",
+      "type": "pickString",
+      "description": "Video sniff mode",
+      "options": [
+        "auto",
+        "browser",
+        "http"
+      ],
+      "default": "auto"
+    },
+    {
+      "id": "videoOutputDir",
+      "type": "promptString",
+      "description": "Download output directory",
+      "default": "${workspaceFolder}\\downloads"
+    },
+    {
+      "id": "videoInputPath",
+      "type": "promptString",
+      "description": "Local video path to compress",
+      "default": "${workspaceFolder}\\downloads\\input.mp4"
+    },
+    {
+      "id": "videoCompressedOutputPath",
+      "type": "promptString",
+      "description": "Compressed video output path",
+      "default": "${workspaceFolder}\\downloads\\compressed.mp4"
+    }
+  ]
+}
