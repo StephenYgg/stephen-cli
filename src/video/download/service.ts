@@ -1,4 +1,5 @@
 import { classifyVideoInput } from './resolver.js';
+import { optional } from '../utils.js';
 import { VideoCommandError, type VideoDownloadResult, type VideoSniffMode } from '../types.js';
 import type { VideoSniffService } from '../sniff/service.js';
 import type { DirectVideoDownloadDriver } from './direct-driver.js';
@@ -78,10 +79,10 @@ function buildDownloadTargetOptions(
   proxyUrl?: string;
 } {
   return {
-    ...(options.outputDir ? { outputDir: options.outputDir } : {}),
-    ...(options.outputPath ? { outputPath: options.outputPath } : {}),
-    ...(options.noProxy !== undefined ? { noProxy: options.noProxy } : {}),
-    ...(options.proxyUrl ? { proxyUrl: options.proxyUrl } : {}),
+    ...optional('outputDir', options.outputDir),
+    ...optional('outputPath', options.outputPath),
+    ...optional('noProxy', options.noProxy),
+    ...optional('proxyUrl', options.proxyUrl),
     sourceUrl
   };
 }
