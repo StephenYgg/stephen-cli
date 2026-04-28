@@ -219,4 +219,67 @@ describe('VideoDownloadService', () => {
       sourceUrl: 'https://cdn.example.com/master.m3u8'
     });
   });
+
+  it('passes all download options including proxy options through to driver', async () => {
+    const directDriver = {
+      download: vi.fn(async () => ({
+        mediaType: 'mp4' as const,
+        outputPath: 'out.mp4',
+        sourceUrl: 'https://cdn.example.com/video.mp4'
+      }))
+    };
+    const hlsDriver = { download: vi.fn() };
+    const sniffService = {
+      sniff: vi.fn(async () => {
+        throw new Error('should not run');
+      })
+    };
+    const service = new VideoDownloadService({ directDriver, hlsDriver, sniffService });
+
+    await service.download({
+      input: 'https://cdn.example.com/video.mp4',
+      mode: 'auto',
+      outputDir: '/output',
+      outputPath: '/output/video.mp4',
+      noProxy: true,
+      proxyUrl: 'http://proxy.example.com:8080'
+    });
+
+    // Verify ALL fields are passed through
+    expect(directDriver.download).toHaveBeenCalledWith({
+      outputDir: '/output',
+      outputPath: '/output/video.mp4',
+      noProxy: true,
+      proxyUrl: 'http://proxy.example.com:8080',
+      sourceUrl: 'https://cdn.example.com/video.mp4'
+    });
+  });
+
+  it('omits undefined optional fields from driver call', async () => {
+    const directDriver = {
+      download: vi.fn(async () => ({
+        mediaType: 'mp4' as const,
+        outputPath: 'out.mp4',
+        sourceUrl: 'https://cdn.example.com/video.mp4'
+      }))
+    };
+    const hlsDriver = { download: vi.fn() };
+    const sniffService = {
+      sniff: vi.fn(async () => {
+        throw new Error('should not run');
+      })
+    };
+    const service = new VideoDownloadService({ directDriver, hlsDriver, sniffService });
+
+    await service.download({
+      input: 'https://cdn.example.com/video.mp4',
+      mode: 'auto'
+      // no outputDir, outputPath, noProxy, or proxyUrl
+    });
+
+    // Verify only defined fields are passed
+    expect(directDriver.download).toHaveBeenCalledWith({
+      sourceUrl: 'https://cdn.example.com/video.mp4'
+    });
+  });
 });

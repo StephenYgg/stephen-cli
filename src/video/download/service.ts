@@ -62,7 +62,6 @@ export class VideoDownloadService {
   }
 }
 
-/* c8 ignore start */
 function buildDownloadTargetOptions(
   options: {
     outputDir?: string;
@@ -86,4 +85,3 @@ function buildDownloadTargetOptions(
     sourceUrl
   };
 }
-/* c8 ignore end */
