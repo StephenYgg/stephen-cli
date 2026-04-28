@@ -3,9 +3,6 @@ import { basename, win32 } from 'node:path';
 import type { VideoRuntime } from '../runtime.js';
 import { VideoCommandError, type VideoDownloadResult } from '../types.js';
 
-// Proxy configuration
-const DEFAULT_PROXY_URL = 'http://127.0.0.1:7890';
-
 async function fetchWithProxy(
   url: string,
   runtime: Pick<VideoRuntime, 'fetch'>,
@@ -15,7 +12,7 @@ async function fetchWithProxy(
     return await runtime.fetch(url);
   }
 
-  const proxyUrl = options?.proxyUrl ?? DEFAULT_PROXY_URL;
+  const proxyUrl = options?.proxyUrl ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY ?? 'http://127.0.0.1:7890';
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // @ts-ignore -- https-proxy-agent uses exports map that NodeNext can't resolve in dynamic import
