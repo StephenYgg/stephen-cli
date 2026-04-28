@@ -22,7 +22,7 @@ export interface VideoFetchResponse {
 export interface VideoRuntime {
   execFile: (file: string, args: string[]) => Promise<VideoExecResult>;
   fetch: (input: string, init?: RequestInit) => Promise<VideoFetchResponse>;
-  launchBrowserSniffer: (url: string) => Promise<VideoCandidate[]>;
+  launchBrowserSniffer: (url: string, options?: { noProxy?: boolean; proxyUrl?: string }) => Promise<VideoCandidate[]>;
   writeFile: (path: string, data: Uint8Array) => Promise<void>;
 }
 

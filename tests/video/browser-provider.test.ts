@@ -28,6 +28,6 @@ describe('BrowserVideoSniffProvider', () => {
         url: 'https://cdn.example.com/video.mp4'
       }
     ]);
-    expect(launchBrowserSniffer).toHaveBeenCalledWith('https://example.com/watch');
+    expect(launchBrowserSniffer).toHaveBeenCalledWith('https://example.com/watch', undefined);
   });
 });

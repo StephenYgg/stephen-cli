@@ -9,7 +9,7 @@ export class HttpVideoSniffProvider {
     this.runtime = dependencies.runtime;
   }
 
-  async sniff(sourceUrl: string): Promise<VideoCandidate[]> {
+  async sniff(sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }): Promise<VideoCandidate[]> {
     const response = await this.runtime.fetch(sourceUrl);
 
     if (!response.ok) {

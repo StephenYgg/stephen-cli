@@ -59,8 +59,8 @@ export function registerVideoCommands(
     runtime: dependencies.runtime
   });
   const sniffService = new VideoSniffService({
-    browserProvider: (sourceUrl) => browserProvider.sniff(sourceUrl),
-    httpProvider: (sourceUrl) => httpProvider.sniff(sourceUrl)
+    browserProvider: (sourceUrl, opts) => browserProvider.sniff(sourceUrl, opts),
+    httpProvider: (sourceUrl, opts) => httpProvider.sniff(sourceUrl, opts)
   });
   const downloadService = new VideoDownloadService({
     directDriver: new DirectVideoDownloadDriver({

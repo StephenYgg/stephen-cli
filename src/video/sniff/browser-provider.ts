@@ -8,7 +8,7 @@ export class BrowserVideoSniffProvider {
     this.runtime = dependencies.runtime;
   }
 
-  sniff(sourceUrl: string): Promise<VideoCandidate[]> {
-    return this.runtime.launchBrowserSniffer(sourceUrl);
+  sniff(sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }): Promise<VideoCandidate[]> {
+    return this.runtime.launchBrowserSniffer(sourceUrl, options);
   }
 }

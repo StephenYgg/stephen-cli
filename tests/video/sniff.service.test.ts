@@ -122,4 +122,69 @@ describe('VideoSniffService', () => {
       message: 'boom'
     });
   });
+
+  it('passes proxy options to http provider in http mode', async () => {
+    const httpProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
+      expect(options?.noProxy).toBe(true);
+      expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
+      return [];
+    });
+    const service = new VideoSniffService({
+      browserProvider: vi.fn(async () => []),
+      httpProvider
+    });
+
+    await service.sniff({
+      mode: 'http',
+      sourceUrl: 'https://example.com/watch',
+      noProxy: true,
+      proxyUrl: 'http://proxy.example.com:8080'
+    });
+
+    expect(httpProvider).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes proxy options to browser provider in browser mode', async () => {
+    const browserProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
+      expect(options?.noProxy).toBe(true);
+      expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
+      return [];
+    });
+    const service = new VideoSniffService({
+      browserProvider,
+      httpProvider: vi.fn(async () => [])
+    });
+
+    await service.sniff({
+      mode: 'browser',
+      sourceUrl: 'https://example.com/watch',
+      noProxy: true,
+      proxyUrl: 'http://proxy.example.com:8080'
+    });
+
+    expect(browserProvider).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes proxy options in auto mode (browser first, then http fallback)', async () => {
+    const browserProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
+      expect(options?.noProxy).toBe(true);
+      expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
+      throw Object.assign(new Error('browser unavailable'), { recoverable: true });
+    });
+    const httpProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
+      expect(options?.noProxy).toBe(true);
+      expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
+      return [];
+    });
+    const service = new VideoSniffService({ browserProvider, httpProvider });
+
+    const result = await service.sniff({
+      mode: 'auto',
+      sourceUrl: 'https://example.com/watch',
+      noProxy: true,
+      proxyUrl: 'http://proxy.example.com:8080'
+    });
+
+    expect(result.mode).toBe('http');
+  });
 });

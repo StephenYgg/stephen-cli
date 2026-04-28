@@ -41,7 +41,9 @@ export class VideoDownloadService {
 
     const sniffed = await this.sniffService.sniff({
       mode: options.mode,
-      sourceUrl: classified.url
+      sourceUrl: classified.url,
+      noProxy: options.noProxy,
+      proxyUrl: options.proxyUrl
     });
     const candidate = sniffed.candidates[0];
 
