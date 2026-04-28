@@ -23,8 +23,9 @@ async function fetchWithProxy(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await runtime.fetch(url, { agent: new mod.HttpsProxyAgent(proxyUrl) } as any);
     return response;
-  } catch {
+  } catch (error) {
     // Fall back to direct connection
+    console.warn(`[stephen] Proxy connection failed (${proxyUrl}), falling back to direct connection: ${error instanceof Error ? error.message : String(error)}`);
     return await runtime.fetch(url);
   }
 }

@@ -171,4 +171,41 @@ describe('DirectVideoDownloadDriver', () => {
     // Should NOT contain percentage like "0%" or "100%" (no fake progress bar)
     expect(stderrOutputs.some(o => o.includes('%'))).toBe(false);
   });
+
+  it('warns when proxy connection fails and falls back to direct', async () => {
+    const stderrOutputs: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => { stderrOutputs.push(String(args.join(' '))); };
+
+    const driver = new DirectVideoDownloadDriver({
+      runtime: {
+        fetch: vi.fn(async (url, opts) => {
+          // When agent is present (proxy mode), simulate proxy failure
+          if ((opts as any)?.agent) {
+            throw new Error('proxy connection refused');
+          }
+          // Direct fallback succeeds
+          return {
+            arrayBuffer: async () => Buffer.from('video'),
+            headers: new Headers({ 'content-length': '5' }),
+            ok: true,
+            status: 200,
+            text: async () => ''
+          };
+        }),
+        writeFile: vi.fn(async () => undefined)
+      }
+    });
+
+    await driver.download({
+      sourceUrl: 'https://cdn.example.com/video.mp4',
+      proxyUrl: 'http://invalid-proxy:9999'
+    });
+
+    console.warn = origWarn;
+
+    const joined = stderrOutputs.join(' ');
+    expect(joined.includes('Proxy') || joined.includes('proxy')).toBe(true);
+    expect(joined.includes('failed') || joined.includes('fallback')).toBe(true);
+  });
 });
