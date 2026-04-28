@@ -10,6 +10,7 @@ export interface DiskCleanupRuntime {
   disableHibernation: () => Promise<void>;
   inspectPath: (path: string) => Promise<{
     exists: boolean;
+    isDirectory: boolean;
     sizeBytes: number;
   }>;
 }
@@ -68,13 +69,14 @@ export function createDiskCleanupRuntime(
   };
 }
 
-async function inspectPath(path: string): Promise<{ exists: boolean; sizeBytes: number }> {
+async function inspectPath(path: string): Promise<{ exists: boolean; isDirectory: boolean; sizeBytes: number }> {
   try {
     const stats = await stat(path);
 
     if (!stats.isDirectory()) {
       return {
         exists: true,
+        isDirectory: false,
         sizeBytes: stats.size
       };
     }
@@ -82,12 +84,14 @@ async function inspectPath(path: string): Promise<{ exists: boolean; sizeBytes: 
     const sizeBytes = await getDirectorySize(path);
     return {
       exists: true,
+      isDirectory: true,
       sizeBytes
     };
   } catch (error) {
     if (isNotFoundError(error)) {
       return {
         exists: false,
+        isDirectory: false,
         sizeBytes: 0
       };
     }

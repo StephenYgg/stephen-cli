@@ -33,13 +33,18 @@ export class HlsVideoDownloadDriver {
 
     const chunks: Buffer[] = [];
 
-    for (const segmentUrl of segmentUrls) {
-      const segmentResponse = await this.runtime.fetch(segmentUrl);
+    // Fetch all segments concurrently
+    const segmentResponses = await Promise.all(
+      segmentUrls.map((segmentUrl) => this.runtime.fetch(segmentUrl))
+    );
+
+    for (let i = 0; i < segmentResponses.length; i++) {
+      const segmentResponse = segmentResponses[i];
 
       if (!segmentResponse.ok) {
         throw new VideoCommandError(
           'VIDEO_DOWNLOAD_FAILED',
-          `Failed to download ${segmentUrl}. HTTP ${segmentResponse.status}.`
+          `Failed to download ${segmentUrls[i]}. HTTP ${segmentResponse.status}.`
         );
       }
 

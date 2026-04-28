@@ -244,25 +244,13 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
         }
       }
 
-      const deleted = createService().delete(parsed);
-      dependencies.stdout(
-        `${renderAkRecordsAsJson(
-          [
-            {
-              createdAt: '',
-              email: null,
-              env: parsed.env ?? 'bzy-pre',
-              id: parsed.id ?? '',
-              key: deleted ? 'deleted' : 'not-deleted',
-              phone: null,
-              updatedAt: '',
-              userId: null,
-              userName: null
-            }
-          ],
-          1
-        )}\n`
-      );
+      const service = createService();
+      const record = service.get(parsed);
+      const deleted = service.delete(parsed);
+      if (!deleted) {
+        throw new AkServiceError('STORAGE_ERROR', 'Failed to delete the API key record.', 6);
+      }
+      writeRecords([record], parsed.format, false, 1, dependencies);
     });
 
   config.command('list')
@@ -383,7 +371,11 @@ function isCliError(
 }
 
 function parseLimit(value: string): number {
-  return Number.parseInt(value, 10);
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    throw new Error(`Invalid limit: '${value}' is not a number`);
+  }
+  return parsed;
 }
 
 export function applyTableShortcut<T extends { format?: string; table?: boolean }>(options: T): T & {

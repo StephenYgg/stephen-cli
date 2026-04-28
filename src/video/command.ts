@@ -17,6 +17,7 @@ import {
   renderVideoOperationAsTable
 } from './output.js';
 import type { VideoRuntime } from './runtime.js';
+import { VideoCommandError } from './types.js';
 
 export interface VideoCommandDependencies {
   runtime: VideoRuntime;
@@ -168,13 +169,7 @@ export function handleVideoCommandError(
   error: unknown,
   dependencies: Pick<VideoCommandDependencies, 'stderr'>
 ): number | undefined {
-  if (
-    error instanceof Error &&
-    'code' in error &&
-    typeof error.code === 'string' &&
-    'exitCode' in error &&
-    typeof error.exitCode === 'number'
-  ) {
+  if (error instanceof VideoCommandError) {
     const details = (error as { details?: unknown }).details;
     dependencies.stderr(
       `${renderVideoCommandErrorAsJson(

@@ -68,6 +68,7 @@ describe('disk runtime', () => {
 
     expect(result).toEqual({
       exists: false,
+      isDirectory: false,
       sizeBytes: 0
     });
   });
@@ -82,6 +83,19 @@ describe('disk runtime', () => {
 
     expect(result.exists).toBe(true);
     expect(result.sizeBytes).toBe(5);
+    expect(result.isDirectory).toBe(false);
+  });
+
+  it('returns isDirectory: true for directories', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'stephen-disk-isdir-'));
+    const dirPath = join(root, 'subdir');
+    mkdirSync(dirPath, { recursive: true });
+    const runtime = createDiskCleanupRuntime();
+
+    const result = await runtime.inspectPath(dirPath);
+
+    expect(result.exists).toBe(true);
+    expect(result.isDirectory).toBe(true);
   });
 
   it('delegates hibernation disabling to powercfg', async () => {

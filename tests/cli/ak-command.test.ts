@@ -175,6 +175,28 @@ describe('stephen ak command', () => {
     expect(result.stdout).toContain('"id": "');
   });
 
+  it('returns the actual deleted record data, not a fake object', async () => {
+    const added = await execute([
+      'ak',
+      'add',
+      '-e',
+      'bzy-pre',
+      '-k',
+      'op_sk_abcdef123456',
+      '-n',
+      'Stephen'
+    ]);
+    const parsed = JSON.parse(added.stdout) as { data: { id: string; userName: string; key: string }[] };
+
+    const result = await execute(['ak', 'delete', '--id', parsed.data[0]!.id, '--yes']);
+    const resultParsed = JSON.parse(result.stdout) as { data: { id: string; userName: string; key: string }[] };
+
+    expect(result.exitCode).toBe(0);
+    expect(resultParsed.data[0]!.id).toBe(parsed.data[0]!.id);
+    expect(resultParsed.data[0]!.userName).toBe('Stephen');
+    expect(resultParsed.data[0]!.key).not.toBe('deleted');
+  });
+
   it('updates metadata and can render the result as a table', async () => {
     await execute(['ak', 'add', '-e', 'bzy-pre', '-k', 'op_sk_abcdef123456', '-n', 'Stephen']);
 
@@ -332,8 +354,11 @@ describe('stephen ak command', () => {
     expect(exitCode).toBe(9);
   });
 
-  it('renders a not-deleted marker when the repository reports a false delete', async () => {
-    let stdout = '';
+  it('returns a storage error when the repository reports a false delete', async () => {
+    // Use a valid ciphertext so decryption succeeds before we hit the delete failure.
+    // masterKey = '0123456789abcdef0123456789abcdef', plaintext = 'op_sk_test1234567890abcdef'
+    const encrypted = 'lxMxQmh2iK7qgsGt.R6wCQaqlyCCFT-LxKnlmgw.nfDVVV6ze6pjqgK7jEv_XHwIM8NxwrIIFLM';
+    let stderr = '';
 
     const cli = createCli({
       confirm: async () => true,
@@ -347,8 +372,8 @@ describe('stephen ak command', () => {
           email: null,
           env: 'bzy-pre',
           id: 'abc123',
-          keyCiphertext: 'encrypted',
-          keySearchPrefix: 'op_sk_abcdef',
+          keyCiphertext: encrypted,
+          keySearchPrefix: 'op_sk_test12', // deriveAkSearchPrefix('op_sk_test1234567890abcdef')
           phone: null,
           updatedAt: '2026-04-16T00:00:00.000Z',
           userId: null,
@@ -358,15 +383,15 @@ describe('stephen ak command', () => {
         list: () => [],
         updateMetadata: () => null
       } as unknown as AkRepository,
-      stderr: () => undefined,
-      stdout: (value) => {
-        stdout += value;
-      }
+      stderr: (value) => {
+        stderr += value;
+      },
+      stdout: () => undefined
     });
 
     const exitCode = await cli.run(['ak', 'delete', '--id', 'abc123', '--yes']);
 
-    expect(exitCode).toBe(0);
-    expect(stdout).toContain('"key": "not-deleted"');
+    expect(exitCode).toBe(6);
+    expect(stderr).toContain('"code": "STORAGE_ERROR"');
   });
 });
