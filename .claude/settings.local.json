@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx stephen:*)"
+      "Bash(cd /home/Developments/stephen-cli && *)",
+      "Read(/home/Developments/stephen-cli/**)",
+      "Write(/home/Developments/stephen-cli/**)",
+      "ReadWrite(/home/Developments/stephen-cli/**)"
     ]
   }
 }

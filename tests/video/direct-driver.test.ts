@@ -143,4 +143,32 @@ describe('DirectVideoDownloadDriver', () => {
       outputPath: 'video.mp4'
     });
   });
+
+  it('prints completion message after download finishes without fake progress bar', async () => {
+    const stderrOutputs: string[] = [];
+    const origError = console.error;
+    console.error = (...args: unknown[]) => { stderrOutputs.push(String(args.join(' '))); };
+
+    const driver = new DirectVideoDownloadDriver({
+      runtime: {
+        fetch: vi.fn(async () => ({
+          arrayBuffer: async () => Buffer.from('video-bytes'),
+          headers: new Headers({ 'content-length': '11' }),
+          ok: true,
+          status: 200,
+          text: async () => ''
+        })),
+        writeFile: vi.fn(async () => undefined)
+      }
+    });
+
+    await driver.download({ sourceUrl: 'https://cdn.example.com/video.mp4' });
+
+    console.error = origError;
+
+    // Should print completion message (not instant-complete progress bar)
+    expect(stderrOutputs.some(o => o.includes('Downloaded') || o.includes('video-bytes'))).toBe(true);
+    // Should NOT contain percentage like "0%" or "100%" (no fake progress bar)
+    expect(stderrOutputs.some(o => o.includes('%'))).toBe(false);
+  });
 });

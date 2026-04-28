@@ -26,13 +26,17 @@ export interface VideoCommandDependencies {
 
 const sniffOptionsSchema = z.object({
   format: z.enum(['json', 'table']).default('json'),
-  mode: z.enum(['auto', 'browser', 'http']).default('auto')
+  mode: z.enum(['auto', 'browser', 'http']).default('auto'),
+  proxy: z.string().optional(),
+  skipProxy: z.boolean().default(false)
 });
 
 const downloadOptionsSchema = z.object({
   format: z.enum(['json', 'table']).default('json'),
   mode: z.enum(['auto', 'browser', 'http']).default('auto'),
-  outputDir: z.string().optional()
+  outputDir: z.string().optional(),
+  proxy: z.string().optional(),
+  skipProxy: z.boolean().default(false)
 });
 
 const compressOptionsSchema = z.object({
@@ -76,11 +80,15 @@ export function registerVideoCommands(
     .option('--mode <mode>', 'sniff mode', 'auto')
     .option('--format <format>', 'output format', 'json')
     .option('-t, --table', 'render as a table')
+    .option('--proxy <proxy>', 'proxy URL')
+    .option('--skip-proxy', 'disable proxy')
     .action(async (input, options) => {
       const parsed = sniffOptionsSchema.parse(applyVideoTableShortcut(options));
       const result = await sniffService.sniff({
         mode: parsed.mode,
-        sourceUrl: input
+        sourceUrl: input,
+        ...(parsed.proxy ? { proxy: parsed.proxy } : {}),
+        ...(parsed.skipProxy ? { noProxy: true } : {})
       });
 
       if (parsed.format === 'table') {
@@ -97,12 +105,16 @@ export function registerVideoCommands(
     .option('--output-dir <outputDir>', 'output directory')
     .option('--format <format>', 'output format', 'json')
     .option('-t, --table', 'render as a table')
+    .option('--proxy <proxy>', 'proxy URL')
+    .option('--skip-proxy', 'disable proxy')
     .action(async (input, options) => {
       const parsed = downloadOptionsSchema.parse(applyVideoTableShortcut(options));
       const result = await downloadService.download({
         input,
         mode: parsed.mode,
-        ...(parsed.outputDir ? { outputDir: parsed.outputDir } : {})
+        ...(parsed.outputDir ? { outputDir: parsed.outputDir } : {}),
+        ...(parsed.proxy ? { proxy: parsed.proxy } : {}),
+        ...(parsed.skipProxy ? { noProxy: true } : {})
       });
 
       if (parsed.format === 'table') {

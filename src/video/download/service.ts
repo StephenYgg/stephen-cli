@@ -26,6 +26,8 @@ export class VideoDownloadService {
     mode: VideoSniffMode;
     outputDir?: string;
     outputPath?: string;
+    noProxy?: boolean;
+    proxyUrl?: string;
   }): Promise<VideoDownloadResult> {
     const classified = classifyVideoInput(options.input);
 
@@ -63,16 +65,22 @@ function buildDownloadTargetOptions(
   options: {
     outputDir?: string;
     outputPath?: string;
+    noProxy?: boolean;
+    proxyUrl?: string;
   },
   sourceUrl: string
 ): {
   outputDir?: string;
   outputPath?: string;
   sourceUrl: string;
+  noProxy?: boolean;
+  proxyUrl?: string;
 } {
   return {
     ...(options.outputDir ? { outputDir: options.outputDir } : {}),
     ...(options.outputPath ? { outputPath: options.outputPath } : {}),
+    ...(options.noProxy !== undefined ? { noProxy: options.noProxy } : {}),
+    ...(options.proxyUrl ? { proxyUrl: options.proxyUrl } : {}),
     sourceUrl
   };
 }
