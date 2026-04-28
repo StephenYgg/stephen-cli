@@ -147,7 +147,7 @@ export class AkRepository {
       return null;
     }
 
-    this.#database
+    const row = this.#database
       .prepare(
         `UPDATE ak_records
          SET user_id = @userId,
@@ -155,18 +155,23 @@ export class AkRepository {
              email = @email,
              phone = @phone,
              updated_at = @updatedAt
-         WHERE id = @id`
+         WHERE id = @id
+         RETURNING *`
       )
-      .run({
+      .get({
         email: input.email === undefined ? current.email : input.email,
         id: input.id,
         phone: input.phone === undefined ? current.phone : input.phone,
         updatedAt: input.updatedAt,
         userId: input.userId === undefined ? current.userId : input.userId,
         userName: input.userName === undefined ? current.userName : input.userName
-      });
+      }) as AkRecordRow | undefined;
 
-    return this.getById(input.id);
+    if (!row) {
+      return null;
+    }
+
+    return mapRowToRecord(row);
   }
 
   deleteById(id: string): boolean {

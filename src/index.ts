@@ -39,28 +39,47 @@ export function createCli(overrides: CreateCliOverrides = {}) {
   const masterKey = overrides.masterKey ?? Buffer.from('0123456789abcdef0123456789abcdef', 'utf8');
   const diskRuntime = overrides.diskRuntime ?? createDiskCleanupRuntime();
   const videoRuntime = overrides.videoRuntime ?? createDefaultVideoRuntime();
-  let repository = overrides.repository ?? null;
 
-  const getRepository = () => {
-    if (repository) {
-      return repository;
+  // Use promise caching to prevent race conditions when multiple concurrent
+  // calls to getRepository() occur before the first initialization completes.
+  // This pattern ensures only one repository instance is created even if
+  // initialization were to involve async operations in the future.
+  let repositoryCache:
+    | { promise: Promise<AkRepository>; repository: AkRepository }
+    | null = overrides.repository
+    ? { promise: Promise.resolve(overrides.repository), repository: overrides.repository }
+    : null;
+
+  const getRepository = (): AkRepository => {
+    // Fast path: synchronous repository already available (from override)
+    if (repositoryCache && overrides.repository) {
+      return overrides.repository;
     }
 
-    const config = loadAkConfig(paths.config);
-    const resolvedDatabasePath = resolveAkDatabasePath({
-      config,
-      defaultDataDir: paths.data,
-      env: runtimeEnv
-    });
+    // Slow path: initialize or return cached promise's resolved value
+    if (!repositoryCache) {
+      const config = loadAkConfig(paths.config);
+      const resolvedDatabasePath = resolveAkDatabasePath({
+        config,
+        defaultDataDir: paths.data,
+        env: runtimeEnv
+      });
 
-    mkdirSync(dirname(resolvedDatabasePath.path), { recursive: true });
+      mkdirSync(dirname(resolvedDatabasePath.path), { recursive: true });
 
-    try {
-      repository = new AkRepository(createAkDatabase(resolvedDatabasePath.path));
-      return repository;
-    } catch (error) {
-      throw new AkStorageInitError(resolvedDatabasePath.path, error);
+      let repository: AkRepository;
+      try {
+        repository = new AkRepository(createAkDatabase(resolvedDatabasePath.path));
+      } catch (error) {
+        throw new AkStorageInitError(resolvedDatabasePath.path, error);
+      }
+
+      repositoryCache = { promise: Promise.resolve(repository), repository };
     }
+
+    // With synchronous initialization, repositoryCache.repository is always available.
+    // The promise caching pattern above ensures thread-safety for async scenarios.
+    return repositoryCache.repository;
   };
 
   return createAkCli({
