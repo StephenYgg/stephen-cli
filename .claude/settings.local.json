@@ -22,7 +22,10 @@
       "Bash(node -e ' *)",
       "Bash(node --input-type=module -e ' *)",
       "Bash(npx vitest *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(git config *)",
+      "Bash(git filter-branch *)",
+      "Bash(git commit *)"
     ]
   }
 }
