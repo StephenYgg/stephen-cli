@@ -4,37 +4,68 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "stephen video sniff",
-      "program": "${workspaceFolder}/dist/index.js",
-      "args": [
-        "video",
-        "sniff",
-        "${input:videoUrl}",
-        "--mode",
-        "${input:videoMode}",
-        "--format",
-        "json"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "sourceMaps": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "stephen video download",
+      "name": "video download: direct mp4 (fetch)",
       "program": "${workspaceFolder}/dist/index.js",
       "args": [
         "video",
         "download",
-        "${input:videoUrl}",
+        "${input:mediaUrl}",
         "--mode",
-        "${input:videoMode}",
+        "http",
         "--output-dir",
-        "${input:videoOutputDir}",
+        "${input:downloadOutputDir}",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "env": {
+        "HTTP_PROXY": "${input:proxyUrl}"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "video download: direct m3u8 (fetch)",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "download",
+        "${input:mediaUrl}",
+        "--mode",
+        "http",
+        "--output-dir",
+        "${input:downloadOutputDir}",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "env": {
+        "HTTP_PROXY": "${input:proxyUrl}"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "video download: page via browser (Playwright)",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "download",
+        "${input:pageUrl}",
+        "--mode",
+        "browser",
+        "--output-dir",
+        "${input:downloadOutputDir}",
         "--format",
         "json"
       ],
@@ -48,14 +79,59 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "stephen video compress",
+      "name": "video sniff: http mode",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "sniff",
+        "${input:pageUrl}",
+        "--mode",
+        "http",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "env": {
+        "HTTP_PROXY": "${input:proxyUrl}"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "video sniff: browser mode",
+      "program": "${workspaceFolder}/dist/index.js",
+      "args": [
+        "video",
+        "sniff",
+        "${input:pageUrl}",
+        "--mode",
+        "browser",
+        "--format",
+        "json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "video compress",
       "program": "${workspaceFolder}/dist/index.js",
       "args": [
         "video",
         "compress",
-        "${input:videoInputPath}",
+        "${input:compressInputPath}",
         "--output-path",
-        "${input:videoCompressedOutputPath}",
+        "${input:compressOutputPath}",
         "--format",
         "json"
       ],
@@ -69,39 +145,40 @@
   ],
   "inputs": [
     {
-      "id": "videoUrl",
+      "id": "mediaUrl",
       "type": "promptString",
-      "description": "Page, m3u8, or mp4 URL",
+      "description": "Direct media URL (.mp4 or .m3u8)",
       "default": "https://example.com/video.mp4"
     },
     {
-      "id": "videoMode",
-      "type": "pickString",
-      "description": "Video sniff mode",
-      "options": [
-        "auto",
-        "browser",
-        "http"
-      ],
-      "default": "auto"
+      "id": "pageUrl",
+      "type": "promptString",
+      "description": "Page URL to sniff/download",
+      "default": "https://example.com/watch"
     },
     {
-      "id": "videoOutputDir",
+      "id": "downloadOutputDir",
       "type": "promptString",
       "description": "Download output directory",
       "default": "${workspaceFolder}\\downloads"
     },
     {
-      "id": "videoInputPath",
+      "id": "compressInputPath",
       "type": "promptString",
       "description": "Local video path to compress",
       "default": "${workspaceFolder}\\downloads\\input.mp4"
     },
     {
-      "id": "videoCompressedOutputPath",
+      "id": "compressOutputPath",
       "type": "promptString",
       "description": "Compressed video output path",
       "default": "${workspaceFolder}\\downloads\\compressed.mp4"
+    },
+    {
+      "id": "proxyUrl",
+      "type": "promptString",
+      "description": "HTTP proxy URL (leave empty for no proxy)",
+      "default": ""
     }
   ]
 }

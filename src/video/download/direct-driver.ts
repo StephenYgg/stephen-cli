@@ -12,12 +12,16 @@ async function fetchWithProxy(
     return await runtime.fetch(url);
   }
 
-  const proxyUrl = options?.proxyUrl ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY ?? 'http://127.0.0.1:7890';
+  const proxyUrl = options?.proxyUrl ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY;
+  if (!proxyUrl) {
+    return await runtime.fetch(url);
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // @ts-ignore -- https-proxy-agent uses exports map that NodeNext can't resolve in dynamic import
     const mod = (await import('https-proxy-agent')) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit any
     const response = await runtime.fetch(url, { agent: new mod.HttpsProxyAgent(proxyUrl) } as any);
     return response;
   } catch (error) {

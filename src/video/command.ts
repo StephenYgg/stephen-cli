@@ -6,6 +6,7 @@ import { VideoSniffService } from './sniff/service.js';
 import { HttpVideoSniffProvider } from './sniff/http-provider.js';
 import { DirectVideoDownloadDriver } from './download/direct-driver.js';
 import { HlsVideoDownloadDriver } from './download/hls-driver.js';
+import { BrowserDownloadDriver } from './download/browser-driver.js';
 import { VideoDownloadService } from './download/service.js';
 import { VideoCompressionService } from './compress/service.js';
 import {
@@ -63,6 +64,7 @@ export function registerVideoCommands(
     browserProvider: (sourceUrl, opts) => browserProvider.sniff(sourceUrl, opts),
     httpProvider: (sourceUrl, opts) => httpProvider.sniff(sourceUrl, opts)
   });
+  const browserDriver = new BrowserDownloadDriver();
   const downloadService = new VideoDownloadService({
     directDriver: new DirectVideoDownloadDriver({
       runtime: dependencies.runtime
@@ -70,7 +72,8 @@ export function registerVideoCommands(
     hlsDriver: new HlsVideoDownloadDriver({
       runtime: dependencies.runtime
     }),
-    sniffService
+    sniffService,
+    browserDriver
   });
   const compressionService = new VideoCompressionService({
     runtime: dependencies.runtime
@@ -88,7 +91,7 @@ export function registerVideoCommands(
       const result = await sniffService.sniff({
         mode: parsed.mode,
         sourceUrl: input,
-        ...(parsed.proxy ? { proxy: parsed.proxy } : {}),
+        ...(parsed.proxy ? { proxyUrl: parsed.proxy } : {}),
         ...(parsed.skipProxy ? { noProxy: true } : {})
       });
 
@@ -114,7 +117,7 @@ export function registerVideoCommands(
         input,
         mode: parsed.mode,
         ...(parsed.outputDir ? { outputDir: parsed.outputDir } : {}),
-        ...(parsed.proxy ? { proxy: parsed.proxy } : {}),
+        ...(parsed.proxy ? { proxyUrl: parsed.proxy } : {}),
         ...(parsed.skipProxy ? { noProxy: true } : {})
       });
 

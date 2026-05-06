@@ -4,7 +4,15 @@
       "Bash(cd /home/Developments/stephen-cli && *)",
       "Read(/home/Developments/stephen-cli/**)",
       "Write(/home/Developments/stephen-cli/**)",
-      "ReadWrite(/home/Developments/stephen-cli/**)"
+      "ReadWrite(/home/Developments/stephen-cli/**)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(git status *)",
+      "Bash(npm ls *)",
+      "Bash(node -e \"try { require.resolve\\('https-proxy-agent'\\); console.log\\('RESOLVED'\\); } catch\\(e\\) { console.log\\('NOT FOUND:', e.message\\); }\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"const mod = 'https-proxy-agent'; const p = require.resolve\\(mod\\); console.log\\('RESOLVED:', p\\);\")",
+      "Bash(git add *)"
     ]
   }
 }

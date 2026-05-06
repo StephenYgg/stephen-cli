@@ -7,3 +7,4 @@ docs/
 .worktrees/
 *.log
 /scripts/__pycache__
+.stephen-*
