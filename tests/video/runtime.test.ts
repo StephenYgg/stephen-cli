@@ -102,14 +102,14 @@ describe('createDefaultVideoRuntime', () => {
 
     expect(candidates).toEqual([
       {
-        confidence: 0.95,
+        confidence: 0,
         mimeType: 'application/vnd.apple.mpegurl',
         origin: 'network',
         type: 'm3u8',
         url: 'https://cdn.example.com/master.m3u8'
       },
       {
-        confidence: 0.9,
+        confidence: 0,
         mimeType: 'video/mp4',
         origin: 'network',
         type: 'mp4',

@@ -99,7 +99,7 @@ export async function sniffWithBrowserRuntime(
       newContext: () => Promise<{
         close: () => Promise<void>;
         newPage: () => Promise<{
-          goto: (target: string, options: { waitUntil: 'load' }) => Promise<void>;
+          goto: (target: string, options: { waitUntil: 'load' | 'networkidle' }) => Promise<void>;
           on: (event: 'response', handler: (response: {
             headers: () => Record<string, string>;
             url: () => string;
@@ -119,7 +119,7 @@ export async function sniffWithBrowserRuntime(
     });
 
     await page.goto(url, { waitUntil: 'load' });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(60000);
     await context.close();
   } finally {
     await (browser as { close: () => Promise<void> }).close();
@@ -133,16 +133,55 @@ const loadOptionalModule = new Function(
   'return import(specifier);'
 ) as (specifier: string) => Promise<unknown>;
 
+// Matches video resolution: /avc1/WxH/ or /vid/.../WxH/
+const VIDEO_RES_RE = /(?:^|\/)(?:avc1\/|vid\/)(?:\d+\/){0,2}(\d+)x(\d+)/i;
+// Matches audio bitrate: /mp4a/BITRATE/
+const AUDIO_BITRATE_RE = /\/mp4a\/(\d+)/i;
+const AUDIO_RE = /\/mp4a\//i;
+
 export function createCandidateFromBrowserResponse(
   url: string,
   contentType?: string
 ): VideoCandidate | null {
+  const isAudio = AUDIO_RE.test(url);
+
+  let qualityBonus = 0;
+
+  if (isAudio) {
+    const bitrateMatch = AUDIO_BITRATE_RE.exec(url);
+    if (bitrateMatch && bitrateMatch[1]) {
+      const bitrate = parseInt(bitrateMatch[1], 10);
+      // Normalize to 192kbps max
+      qualityBonus = Math.min(bitrate / 192_000, 1) * 0.05;
+    }
+  } else {
+    const resMatch = VIDEO_RES_RE.exec(url);
+    if (resMatch && resMatch[1] && resMatch[2]) {
+      const width = parseInt(resMatch[1], 10);
+      const height = parseInt(resMatch[2], 10);
+      const pixels = width * height;
+      // Normalize to 1920x1080
+      qualityBonus = Math.min(pixels / (1920 * 1080), 1) * 0.05;
+    }
+  }
+
+  // .m4s is a DASH fragment, not a playlist — skip it
+  if (/\.m4s(?:\?|$)/i.test(url)) {
+    return null;
+  }
+
   if (/\.m3u8(?:\?|$)/i.test(url)) {
-    return createVideoCandidate('m3u8', url, 'network', 0.95);
+    if (isAudio) {
+      return null;
+    }
+    return createVideoCandidate('m3u8', url, 'network', qualityBonus);
   }
 
   if (/\.mp4(?:\?|$)/i.test(url) || contentType?.includes('video/mp4')) {
-    return createVideoCandidate('mp4', url, 'network', 0.9);
+    if (isAudio) {
+      return null;
+    }
+    return createVideoCandidate('mp4', url, 'network', qualityBonus);
   }
 
   return null;

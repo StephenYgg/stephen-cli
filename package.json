@@ -41,6 +41,7 @@
     "env-paths": "3.0.0",
     "global-tunnel": "1.2.0",
     "https-proxy-agent": "9.0.0",
+    "playwright": "1.59.1",
     "table": "6.9.0",
     "zod": "4.1.12"
   },
