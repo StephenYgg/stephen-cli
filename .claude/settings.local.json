@@ -12,7 +12,17 @@
       "Bash(node -e \"try { require.resolve\\('https-proxy-agent'\\); console.log\\('RESOLVED'\\); } catch\\(e\\) { console.log\\('NOT FOUND:', e.message\\); }\")",
       "Bash(npm install *)",
       "Bash(node -e \"const mod = 'https-proxy-agent'; const p = require.resolve\\(mod\\); console.log\\('RESOLVED:', p\\);\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(grep -rn \"cli-progress\\\\|progress\" src/ --include=\"*.ts\")",
+      "Bash(grep -rn \"cli-progress\\\\|progress\\\\|ProgressBar\\\\|SingleBar\" src/ tests/ --include=\"*.ts\")",
+      "Bash(head -30 node_modules/cli-progress/index.js)",
+      "Bash(ls node_modules/cli-progress/)",
+      "Bash(node -e ' *)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(npx vitest *)",
+      "Bash(git stash *)"
     ]
   }
 }

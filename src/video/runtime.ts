@@ -13,6 +13,7 @@ export interface VideoExecResult {
 
 export interface VideoFetchResponse {
   arrayBuffer: () => Promise<ArrayBuffer | Uint8Array>;
+  body?: ReadableStream<Uint8Array> | null;
   headers: Headers;
   ok: boolean;
   status: number;
