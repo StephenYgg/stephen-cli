@@ -14,6 +14,7 @@ const report: DiskCleanupReport = {
     requested: false,
     status: 'skipped'
   },
+  level: 'safe',
   mode: 'preview',
   systemRoot: 'C:\\Windows',
   targets: [
@@ -36,6 +37,7 @@ describe('disk output', () => {
     const output = renderDiskCleanupReportAsJson(report);
 
     expect(output).toContain('"ok": true');
+    expect(output).toContain('"level": "safe"');
     expect(output).toContain('"mode": "preview"');
     expect(output).toContain('"label": "npm cache"');
   });
@@ -46,6 +48,33 @@ describe('disk output', () => {
     expect(output).toContain('label');
     expect(output).toContain('npm cache');
     expect(output).toContain('planned');
+  });
+
+  it('renders Downloads entries in JSON and table output when present', () => {
+    const deepReport: DiskCleanupReport = {
+      ...report,
+      downloads: {
+        path: 'C:\\Users\\Stephen\\Downloads',
+        topEntries: [
+          {
+            kind: 'file',
+            name: 'large.iso',
+            path: 'C:\\Users\\Stephen\\Downloads\\large.iso',
+            sizeBytes: 1024,
+            sizeGB: 0
+          }
+        ]
+      },
+      level: 'deep'
+    };
+
+    const json = renderDiskCleanupReportAsJson(deepReport);
+    const table = renderDiskCleanupReportAsTable(deepReport);
+
+    expect(json).toContain('"downloads"');
+    expect(json).toContain('"large.iso"');
+    expect(table).toContain('Downloads top entries');
+    expect(table).toContain('large.iso');
   });
 
   it('maps the table shortcut and rejects missing output format state', () => {

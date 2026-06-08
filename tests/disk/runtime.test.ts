@@ -109,6 +109,61 @@ describe('disk runtime', () => {
     expect(executeCommand).toHaveBeenCalledWith('powercfg', ['-h', 'off']);
   });
 
+  it('delegates generic commands to the injected command executor', async () => {
+    const executeCommand = vi.fn(async () => undefined);
+    const runtime = createDiskCleanupRuntime({
+      executeCommand
+    });
+
+    await runtime.runCommand('dism.exe', ['/Online']);
+
+    expect(executeCommand).toHaveBeenCalledWith('dism.exe', ['/Online']);
+  });
+
+  it('lists top files and folders by recursive size', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'stephen-disk-top-'));
+    const downloads = join(root, 'Downloads');
+    mkdirSync(join(downloads, 'folder'), { recursive: true });
+    writeFileSync(join(downloads, 'small.txt'), 'a', 'utf8');
+    writeFileSync(join(downloads, 'folder', 'large.bin'), 'abcdefghij', 'utf8');
+    const runtime = createDiskCleanupRuntime();
+
+    const result = await runtime.listTopEntriesBySize(downloads, 100);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        kind: 'directory',
+        name: 'folder',
+        sizeBytes: 10
+      }),
+      expect.objectContaining({
+        kind: 'file',
+        name: 'small.txt',
+        sizeBytes: 1
+      })
+    ]);
+  });
+
+  it('limits top entry listing results', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'stephen-disk-top-limit-'));
+    for (let index = 0; index < 101; index += 1) {
+      writeFileSync(join(root, `${index}.txt`), 'a', 'utf8');
+    }
+    const runtime = createDiskCleanupRuntime();
+
+    const result = await runtime.listTopEntriesBySize(root, 100);
+
+    expect(result).toHaveLength(100);
+  });
+
+  it('returns an empty top entry list for missing paths', async () => {
+    const runtime = createDiskCleanupRuntime();
+
+    const result = await runtime.listTopEntriesBySize(join(tmpdir(), 'missing-stephen-downloads'), 100);
+
+    expect(result).toEqual([]);
+  });
+
   it('uses execFile when no custom executeCommand dependency is supplied', async () => {
     vi.resetModules();
     const execFileMock = vi.fn((file: string, args: string[], callback: (error: null) => void) => {

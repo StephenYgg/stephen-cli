@@ -282,9 +282,16 @@ interface AkRecord {
 
 ## `disk cleanup` Command
 
-The `disk cleanup` command provides a conservative Windows cleanup workflow aimed at reclaiming cache space without touching high-risk application data.
+The `disk cleanup` command provides layered Windows cleanup. It previews by default, uses JSON output by default, and avoids deleting user data such as Downloads.
 
-Current cleanup targets:
+Cleanup levels:
+
+- `safe`: current conservative cache cleanup. This is the default.
+- `dev`: `safe` plus common developer caches.
+- `system`: `safe` plus Windows system cleanup actions. Applying this level requires `--confirm`.
+- `deep`: `dev` plus `system`, and reports the top 100 largest Downloads files/folders without deleting them. Applying this level requires `--confirm`.
+
+`safe` targets:
 
 - `%USERPROFILE%\AppData\Local\npm-cache`
 - `%USERPROFILE%\AppData\Local\NuGet`
@@ -292,6 +299,19 @@ Current cleanup targets:
 - `%USERPROFILE%\.m2`
 - `%USERPROFILE%\AppData\Local\Temp`
 - `%SystemRoot%\SoftwareDistribution\Download`
+
+Additional `dev` targets:
+
+- `%USERPROFILE%\.gradle\caches`
+- `%USERPROFILE%\.pnpm-store`
+- `%USERPROFILE%\AppData\Local\pnpm\store`
+- `%USERPROFILE%\AppData\Local\Yarn\Cache`
+- `%USERPROFILE%\AppData\Local\pip\Cache`
+
+Additional `system` actions:
+
+- `%SystemRoot%\Temp`
+- `dism.exe /Online /Cleanup-Image /StartComponentCleanup`
 
 ### Examples
 
@@ -301,10 +321,28 @@ Preview cleanup results in JSON:
 stephen disk cleanup
 ```
 
-Apply conservative cleanup:
+Preview developer cleanup:
+
+```bash
+stephen disk cleanup --level dev
+```
+
+Preview deep cleanup, including Downloads top 100 entries:
+
+```bash
+stephen disk cleanup --level deep
+```
+
+Apply safe cleanup:
 
 ```bash
 stephen disk cleanup --apply
+```
+
+Apply system cleanup after explicit confirmation:
+
+```bash
+stephen disk cleanup --level system --apply --confirm
 ```
 
 Apply cleanup and disable Windows hibernation:
@@ -325,6 +363,8 @@ stephen disk cleanup -t
 - `-t` or `--format table` switches to table rendering.
 - Preview mode is the default.
 - `--apply` is required before any cleanup is executed.
+- `--confirm` is required for `system --apply` and `deep --apply`.
+- Downloads is never deleted; `deep` only lists the largest 100 files/folders.
 
 ## Verification Standard
 

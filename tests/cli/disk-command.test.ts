@@ -13,10 +13,13 @@ function createRuntime(): DiskCleanupRuntime {
   return {
     clearDirectoryContents: vi.fn(async () => undefined),
     disableHibernation: vi.fn(async () => undefined),
+    listTopEntriesBySize: vi.fn(async () => []),
     inspectPath: vi.fn(async (path: string) => ({
       exists: path.includes('npm-cache') || path.includes('Download'),
+      isDirectory: true,
       sizeBytes: path.includes('npm-cache') ? 8 * 1024 * 1024 * 1024 : 300 * 1024 * 1024
-    }))
+    })),
+    runCommand: vi.fn(async () => undefined)
   };
 }
 
@@ -90,6 +93,54 @@ describe('stephen disk command', () => {
     expect(stdout).toContain('"status": "disabled"');
   });
 
+  it('accepts dev cleanup level', async () => {
+    const result = await execute(['disk', 'cleanup', '--level', 'dev']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('"level": "dev"');
+    expect(result.stdout).toContain('Gradle cache');
+  });
+
+  it('requires confirmation before applying system cleanup', async () => {
+    const result = await execute(['disk', 'cleanup', '--level', 'system', '--apply']);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain('"code": "DISK_CLEANUP_CONFIRMATION_REQUIRED"');
+  });
+
+  it('applies system cleanup when confirmation is provided', async () => {
+    const runtime = createRuntime();
+    let stdout = '';
+    const cli = createCli({
+      diskRuntime: runtime,
+      env: {
+        SystemRoot: 'C:\\Windows',
+        USERPROFILE: 'C:\\Users\\Stephen'
+      },
+      stderr: () => undefined,
+      stdout: (value) => {
+        stdout += value;
+      }
+    });
+
+    const exitCode = await cli.run(['disk', 'cleanup', '--level', 'system', '--apply', '--confirm']);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('"level": "system"');
+    expect(runtime.runCommand).toHaveBeenCalledWith('dism.exe', [
+      '/Online',
+      '/Cleanup-Image',
+      '/StartComponentCleanup'
+    ]);
+  });
+
+  it('rejects invalid cleanup levels', async () => {
+    const result = await execute(['disk', 'cleanup', '--level', 'unsafe']);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain('"ok": false');
+  });
+
   it('renders cleanup failures as stable JSON errors with partial progress details', async () => {
     let stderr = '';
 
@@ -100,10 +151,13 @@ describe('stephen disk command', () => {
         }
       }),
       disableHibernation: vi.fn(async () => undefined),
+      listTopEntriesBySize: vi.fn(async () => []),
       inspectPath: vi.fn(async (path: string) => ({
         exists: path.includes('npm-cache') || path.includes('.cache'),
+        isDirectory: true,
         sizeBytes: path.includes('npm-cache') ? 8 * 1024 * 1024 : 4 * 1024 * 1024
-      }))
+      })),
+      runCommand: vi.fn(async () => undefined)
     };
 
     const cli = createCli({

@@ -1,6 +1,6 @@
 import { win32 } from 'node:path';
 
-import type { DiskCleanupReport, DiskCleanupTarget } from './types.js';
+import type { DiskCleanupLevel, DiskCleanupReport, DiskCleanupTarget } from './types.js';
 import type { DiskCleanupRuntime } from './runtime.js';
 
 export { type DiskCleanupRuntime } from './runtime.js';
@@ -13,11 +13,15 @@ export interface DiskCleanupServiceDependencies {
 
 export interface DiskCleanupOptions {
   apply: boolean;
+  confirm: boolean;
   disableHibernate: boolean;
+  level: DiskCleanupLevel;
 }
 
 interface DiskCleanupTargetDefinition {
+  args?: string[];
   action: DiskCleanupTarget['action'];
+  command?: string;
   label: string;
   path: string;
   requiresAdministrator: boolean;
@@ -54,13 +58,23 @@ export class DiskCleanupService {
   }
 
   async cleanup(options: DiskCleanupOptions): Promise<DiskCleanupReport> {
-    const targetDefinitions = this.getConservativeTargets();
+    if (requiresConfirmation(options.level) && options.apply && !options.confirm) {
+      throw new DiskCleanupServiceError(
+        'DISK_CLEANUP_CONFIRMATION_REQUIRED',
+        'Disk cleanup level requires --confirm before apply.'
+      );
+    }
+
+    const targetDefinitions = this.getTargets(options.level);
     const targets: DiskCleanupTarget[] = [];
     const failures: string[] = [];
     let estimatedReclaimBytes = 0;
 
     for (const target of targetDefinitions) {
-      const inspection = await this.runtime.inspectPath(target.path);
+      const inspection =
+        target.action === 'run-command'
+          ? { exists: true, isDirectory: false, sizeBytes: 0 }
+          : await this.runtime.inspectPath(target.path);
       estimatedReclaimBytes += inspection.sizeBytes;
 
       let status: DiskCleanupTarget['status'] = inspection.exists
@@ -70,7 +84,15 @@ export class DiskCleanupService {
 
       if (options.apply && inspection.exists) {
         try {
-          await this.runtime.clearDirectoryContents(target.path);
+          if (target.action === 'clear-directory-contents') {
+            await this.runtime.clearDirectoryContents(target.path);
+          }
+          if (target.action === 'run-command') {
+            await this.runtime.runCommand(target.command!, target.args ?? []);
+          }
+          if (target.action === 'inspect-only') {
+            status = 'planned';
+          }
         } catch (cause) {
           error = getErrorMessage(cause);
           failures.push(`${target.label}: ${error}`);
@@ -80,6 +102,8 @@ export class DiskCleanupService {
 
       targets.push({
         action: target.action,
+        ...(target.command ? { command: target.command } : {}),
+        ...(target.args ? { args: target.args } : {}),
         exists: inspection.exists,
         label: target.label,
         path: target.path,
@@ -108,9 +132,11 @@ export class DiskCleanupService {
     }
 
     const report: DiskCleanupReport = {
+      ...(options.level === 'deep' ? { downloads: await this.getDownloadsReport() } : {}),
       estimatedReclaimBytes,
       estimatedReclaimGB: bytesToGb(estimatedReclaimBytes),
       hibernation,
+      level: options.level,
       mode: options.apply ? 'apply' : 'preview',
       systemRoot: this.systemRoot,
       targets,
@@ -131,7 +157,31 @@ export class DiskCleanupService {
     return report;
   }
 
-  private getConservativeTargets(): DiskCleanupTargetDefinition[] {
+  private async getDownloadsReport(): Promise<NonNullable<DiskCleanupReport['downloads']>> {
+    const path = win32.join(this.userProfileRoot, 'Downloads');
+    return {
+      path,
+      topEntries: await this.runtime.listTopEntriesBySize(path, 100)
+    };
+  }
+
+  private getTargets(level: DiskCleanupLevel): DiskCleanupTargetDefinition[] {
+    if (level === 'safe') {
+      return this.getSafeTargets();
+    }
+
+    if (level === 'dev') {
+      return dedupeTargets([...this.getSafeTargets(), ...this.getDevTargets()]);
+    }
+
+    if (level === 'system') {
+      return dedupeTargets([...this.getSafeTargets(), ...this.getSystemTargets()]);
+    }
+
+    return dedupeTargets([...this.getSafeTargets(), ...this.getDevTargets(), ...this.getSystemTargets()]);
+  }
+
+  private getSafeTargets(): DiskCleanupTargetDefinition[] {
     return [
       {
         action: 'clear-directory-contents',
@@ -171,6 +221,60 @@ export class DiskCleanupService {
       }
     ];
   }
+
+  private getDevTargets(): DiskCleanupTargetDefinition[] {
+    return [
+      {
+        action: 'clear-directory-contents',
+        label: 'Gradle cache',
+        path: win32.join(this.userProfileRoot, '.gradle', 'caches'),
+        requiresAdministrator: false
+      },
+      {
+        action: 'clear-directory-contents',
+        label: 'pnpm store',
+        path: win32.join(this.userProfileRoot, '.pnpm-store'),
+        requiresAdministrator: false
+      },
+      {
+        action: 'clear-directory-contents',
+        label: 'pnpm local store',
+        path: win32.join(this.userProfileRoot, 'AppData', 'Local', 'pnpm', 'store'),
+        requiresAdministrator: false
+      },
+      {
+        action: 'clear-directory-contents',
+        label: 'Yarn cache',
+        path: win32.join(this.userProfileRoot, 'AppData', 'Local', 'Yarn', 'Cache'),
+        requiresAdministrator: false
+      },
+      {
+        action: 'clear-directory-contents',
+        label: 'pip cache',
+        path: win32.join(this.userProfileRoot, 'AppData', 'Local', 'pip', 'Cache'),
+        requiresAdministrator: false
+      }
+    ];
+  }
+
+  private getSystemTargets(): DiskCleanupTargetDefinition[] {
+    return [
+      {
+        action: 'clear-directory-contents',
+        label: 'Windows temp',
+        path: win32.join(this.systemRoot, 'Temp'),
+        requiresAdministrator: true
+      },
+      {
+        action: 'run-command',
+        args: ['/Online', '/Cleanup-Image', '/StartComponentCleanup'],
+        command: 'dism.exe',
+        label: 'DISM component cleanup',
+        path: 'dism.exe /Online /Cleanup-Image /StartComponentCleanup',
+        requiresAdministrator: true
+      }
+    ];
+  }
 }
 
 function bytesToGb(value: number): number {
@@ -179,4 +283,24 @@ function bytesToGb(value: number): number {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
+}
+
+function requiresConfirmation(level: DiskCleanupLevel): boolean {
+  return level === 'system' || level === 'deep';
+}
+
+function dedupeTargets(targets: DiskCleanupTargetDefinition[]): DiskCleanupTargetDefinition[] {
+  const seen = new Set<string>();
+  const result: DiskCleanupTargetDefinition[] = [];
+
+  for (const target of targets) {
+    const key = `${target.action}:${target.command ?? target.path}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(target);
+  }
+
+  return result;
 }

@@ -19,7 +19,7 @@ export function renderDiskCleanupReportAsJson(report: DiskCleanupReport): string
 }
 
 export function renderDiskCleanupReportAsTable(report: DiskCleanupReport): string {
-  return table([
+  const targetTable = table([
     ['label', 'status', 'sizeGB', 'exists', 'requiresAdmin', 'path'],
     ...report.targets.map((target) => [
       target.label,
@@ -30,4 +30,13 @@ export function renderDiskCleanupReportAsTable(report: DiskCleanupReport): strin
       target.path
     ])
   ]);
+
+  if (!report.downloads) {
+    return targetTable;
+  }
+
+  return `${targetTable}\nDownloads top entries\n${table([
+    ['kind', 'sizeGB', 'path'],
+    ...report.downloads.topEntries.map((entry) => [entry.kind, String(entry.sizeGB), entry.path])
+  ])}`;
 }

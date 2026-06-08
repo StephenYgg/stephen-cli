@@ -3,6 +3,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join, win32 } from 'node:path';
 
+import type { DiskDownloadsEntry } from './types.js';
+
 const execFileAsync = promisify(execFile);
 
 export interface DiskCleanupRuntime {
@@ -13,6 +15,8 @@ export interface DiskCleanupRuntime {
     isDirectory: boolean;
     sizeBytes: number;
   }>;
+  listTopEntriesBySize: (path: string, limit: number) => Promise<DiskDownloadsEntry[]>;
+  runCommand: (file: string, args: string[]) => Promise<void>;
 }
 
 export interface CreateDiskCleanupRuntimeDependencies {
@@ -65,7 +69,11 @@ export function createDiskCleanupRuntime(
     disableHibernation: async () => {
       await executeCommand('powercfg', ['-h', 'off']);
     },
-    inspectPath: async (path: string) => inspectPath(path)
+    inspectPath: async (path: string) => inspectPath(path),
+    listTopEntriesBySize: async (path: string, limit: number) => listTopEntriesBySize(path, limit),
+    runCommand: async (file: string, args: string[]) => {
+      await executeCommand(file, args);
+    }
   };
 }
 
@@ -121,6 +129,59 @@ async function getDirectorySize(path: string): Promise<number> {
   }
 
   return total;
+}
+
+async function listTopEntriesBySize(path: string, limit: number): Promise<DiskDownloadsEntry[]> {
+  try {
+    const entries = await readdir(path, { withFileTypes: true });
+    const measured = await Promise.all(
+      entries.map(async (entry): Promise<DiskDownloadsEntry | null> => {
+        const entryPath = join(path, entry.name);
+
+        if (entry.isDirectory()) {
+          return {
+            kind: 'directory',
+            name: entry.name,
+            path: entryPath,
+            sizeBytes: await getDirectorySize(entryPath),
+            sizeGB: 0
+          };
+        }
+
+        if (entry.isFile()) {
+          const stats = await stat(entryPath);
+          return {
+            kind: 'file',
+            name: entry.name,
+            path: entryPath,
+            sizeBytes: stats.size,
+            sizeGB: 0
+          };
+        }
+
+        return null;
+      })
+    );
+
+    return measured
+      .filter((entry): entry is DiskDownloadsEntry => entry !== null)
+      .map((entry) => ({
+        ...entry,
+        sizeGB: bytesToGb(entry.sizeBytes)
+      }))
+      .sort((left, right) => right.sizeBytes - left.sizeBytes)
+      .slice(0, limit);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+function bytesToGb(value: number): number {
+  return Number((value / (1024 ** 3)).toFixed(2));
 }
 
 function resolveHomeDrivePath(env: NodeJS.ProcessEnv): string | null {
