@@ -20,12 +20,15 @@ import { DiskCleanupService } from '../disk/service.js';
 import type { DiskCleanupRuntime, DiskCleanupRoots } from '../disk/runtime.js';
 import { handleVideoCommandError, registerVideoCommands } from '../video/command.js';
 import type { VideoRuntime } from '../video/runtime.js';
+import { handleKr36CommandError, registerKr36Commands } from '../36kr/command.js';
+import type { Kr36Runtime } from '../36kr/runtime.js';
 
 export interface AkCliDependencies {
   confirm: (message: string) => Promise<boolean>;
   diskRuntime: DiskCleanupRuntime;
   env: NodeJS.ProcessEnv;
   getRepository: () => AkRepository;
+  kr36Runtime: Kr36Runtime;
   masterKey: Buffer;
   now: () => string;
   paths: StephenCliPaths;
@@ -151,6 +154,11 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
   });
   registerVideoCommands(program, {
     runtime: dependencies.videoRuntime,
+    stderr: dependencies.stderr,
+    stdout: dependencies.stdout
+  });
+  registerKr36Commands(program, {
+    runtime: dependencies.kr36Runtime,
     stderr: dependencies.stderr,
     stdout: dependencies.stdout
   });
@@ -338,6 +346,14 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
           return videoExitCode;
         }
         /* c8 ignore end */
+
+        const kr36ExitCode = handleKr36CommandError(error, {
+          stderr: dependencies.stderr
+        });
+
+        if (kr36ExitCode !== undefined) {
+          return kr36ExitCode;
+        }
 
         if (error instanceof ZodError) {
           dependencies.stderr(
