@@ -41,8 +41,7 @@ export class VideoDownloadService {
       const sniffed = await this.sniffService.sniff({
         mode: options.mode,
         sourceUrl: classified.url,
-        noProxy: options.noProxy,
-        proxyUrl: options.proxyUrl
+        ...buildProxyOptions(options)
       });
       const candidate = sniffed.candidates[0];
       if (!candidate) {
@@ -51,11 +50,18 @@ export class VideoDownloadService {
           'No supported media candidate was detected for the provided input.'
         );
       }
+      if (candidate.type === 'm3u8') {
+        return this.hlsDriver.download(buildDownloadTargetOptions(options, candidate.url));
+      }
       return this.browserDriver.download(buildDownloadTargetOptions(options, candidate.url));
     }
 
-    // For direct media URLs, try browser driver first if available (handles cookie/session auth)
-    // Then fall back to direct fetch (for .mp4 and .m3u8)
+    if (classified.kind === 'm3u8') {
+      return this.hlsDriver.download(buildDownloadTargetOptions(options, classified.url));
+    }
+
+    // For direct mp4 URLs, try browser driver first if available (handles cookie/session auth).
+    // Then fall back to direct fetch.
     if (this.browserDriver) {
       try {
         return await this.browserDriver.download(buildDownloadTargetOptions(options, classified.url));
@@ -63,7 +69,7 @@ export class VideoDownloadService {
         // If browser driver fails due to PLAYWRIGHT not available, fall through to direct
         if (error instanceof VideoCommandError && error.code === 'VIDEO_BROWSER_UNAVAILABLE') {
           // Browser not available, fall through to direct drivers
-        } else {
+        } else if (!isBrowserDownloadTimeout(error)) {
           throw error;
         }
       }
@@ -74,16 +80,11 @@ export class VideoDownloadService {
       return this.directDriver.download(buildDownloadTargetOptions(options, classified.url));
     }
 
-    if (classified.kind === 'm3u8') {
-      return this.hlsDriver.download(buildDownloadTargetOptions(options, classified.url));
-    }
-
     // Fallback: sniff then use direct/hls driver
     const sniffed = await this.sniffService.sniff({
       mode: options.mode,
       sourceUrl: classified.url,
-      noProxy: options.noProxy,
-      proxyUrl: options.proxyUrl
+      ...buildProxyOptions(options)
     });
     const candidate = sniffed.candidates[0];
 
@@ -100,6 +101,23 @@ export class VideoDownloadService {
 
     return this.hlsDriver.download(buildDownloadTargetOptions(options, candidate.url));
   }
+}
+
+function isBrowserDownloadTimeout(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('waiting for event "download"');
+}
+
+function buildProxyOptions(options: {
+  noProxy?: boolean;
+  proxyUrl?: string;
+}): {
+  noProxy?: boolean;
+  proxyUrl?: string;
+} {
+  return {
+    ...(options.noProxy === undefined ? {} : { noProxy: options.noProxy }),
+    ...(options.proxyUrl === undefined ? {} : { proxyUrl: options.proxyUrl })
+  };
 }
 
 function buildDownloadTargetOptions(

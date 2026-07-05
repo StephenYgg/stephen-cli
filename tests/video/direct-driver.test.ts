@@ -5,9 +5,12 @@ import { DirectVideoDownloadDriver } from '../../src/video/download/direct-drive
 describe('DirectVideoDownloadDriver', () => {
   it('downloads an mp4 response and infers the output filename from the url', async () => {
     const writes: Array<{ path: string; value: string }> = [];
+    const fetchCalls: Array<{ url: string; opts?: RequestInit }> = [];
     const driver = new DirectVideoDownloadDriver({
       runtime: {
-        fetch: vi.fn(async () => ({
+        fetch: vi.fn(async (url, opts) => {
+          fetchCalls.push({ url, opts });
+          return {
           arrayBuffer: async () => Buffer.from('video-bytes'),
           headers: new Headers({
             'content-type': 'video/mp4'
@@ -15,7 +18,8 @@ describe('DirectVideoDownloadDriver', () => {
           ok: true,
           status: 200,
           text: async () => ''
-        })),
+          };
+        }),
         writeFile: vi.fn(async (path, value) => {
           writes.push({
             path,
@@ -38,6 +42,10 @@ describe('DirectVideoDownloadDriver', () => {
         value: 'video-bytes'
       }
     ]);
+    expect(fetchCalls[0]!.opts?.headers).toMatchObject({
+      'user-agent': expect.stringContaining('Mozilla'),
+      referer: 'https://cdn.example.com/'
+    });
   });
 
   it('surfaces non-ok direct download responses as structured errors', async () => {
@@ -235,7 +243,7 @@ describe('DirectVideoDownloadDriver', () => {
     process.env.HTTP_PROXY = originalProxy ?? '';
 
     // Verify an agent was passed (proxy was used with env var URL)
-    expect((fetchCalls[0].opts as any)?.agent).toBeDefined();
+    expect((fetchCalls[0]!.opts as any)?.agent).toBeDefined();
   });
 
   it('explicit proxyUrl takes precedence over HTTP_PROXY env var', async () => {

@@ -51,7 +51,7 @@ describe('HLS concurrent downloads', () => {
     // With concurrent downloads, all segment fetches should start at nearly the same time
     // Sequential: segments start at 0, 50, 100, 150, 200, 250ms
     // Concurrent: segments start at 0, 0, 0, 0, 0, 0ms (within a few ms)
-    const firstStartTime = fetchStartTimes[0];
+    const firstStartTime = fetchStartTimes[0]!;
     const maxStartTime = Math.max(...fetchStartTimes);
     const startTimeSpread = maxStartTime - firstStartTime;
 

@@ -25,9 +25,9 @@ describe('Buffer conversion simplification', () => {
     });
 
     await driver.download({ sourceUrl: 'https://cdn.example.com/video.mp4' });
-    expect(writes[0].data[0]).toBe(1);
-    expect(writes[0].data[1]).toBe(2);
-    expect(writes[0].data[2]).toBe(3);
+    expect(writes[0]!.data[0]).toBe(1);
+    expect(writes[0]!.data[1]).toBe(2);
+    expect(writes[0]!.data[2]).toBe(3);
   });
 
   it('handles regular ArrayBuffer correctly', async () => {
@@ -48,6 +48,6 @@ describe('Buffer conversion simplification', () => {
     });
 
     await driver.download({ sourceUrl: 'https://cdn.example.com/video.mp4' });
-    expect(writes[0].data.byteLength).toBe(3);
+    expect(writes[0]!.data.byteLength).toBe(3);
   });
 });

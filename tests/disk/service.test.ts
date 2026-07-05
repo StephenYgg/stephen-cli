@@ -335,7 +335,7 @@ describe('DiskCleanupService', () => {
       {
         listTopEntriesBySize: vi.fn(async () => [
           {
-            kind: 'file',
+            kind: 'file' as const,
             name: 'large.iso',
             path: `${downloadsPath}\\large.iso`,
             sizeBytes: 100,

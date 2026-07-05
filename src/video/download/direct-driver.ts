@@ -4,19 +4,22 @@ import { SingleBar } from 'cli-progress';
 
 import type { VideoRuntime } from '../runtime.js';
 import { VideoCommandError, type VideoDownloadResult } from '../types.js';
+import { createMediaRequestInit } from './media-request.js';
 
 async function fetchWithProxy(
   url: string,
   runtime: Pick<VideoRuntime, 'fetch'>,
   options?: { noProxy?: boolean; proxyUrl?: string }
 ): Promise<Awaited<ReturnType<VideoRuntime['fetch']>>> {
+  const init = createMediaRequestInit(url);
+
   if (options?.noProxy) {
-    return await runtime.fetch(url);
+    return await runtime.fetch(url, init);
   }
 
   const proxyUrl = options?.proxyUrl ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY;
   if (!proxyUrl) {
-    return await runtime.fetch(url);
+    return await runtime.fetch(url, init);
   }
 
   try {
@@ -24,12 +27,12 @@ async function fetchWithProxy(
     // @ts-ignore -- https-proxy-agent uses exports map that NodeNext can't resolve in dynamic import
     const mod = (await import('https-proxy-agent')) as any;
     // eslint-disable-next-line @typescript-eslint/no-explicit any
-    const response = await runtime.fetch(url, { agent: new mod.HttpsProxyAgent(proxyUrl) } as any);
+    const response = await runtime.fetch(url, { ...init, agent: new mod.HttpsProxyAgent(proxyUrl) } as any);
     return response;
   } catch (error) {
     // Fall back to direct connection
     console.warn(`[stephen] Proxy connection failed (${proxyUrl}), falling back to direct connection: ${error instanceof Error ? error.message : String(error)}`);
-    return await runtime.fetch(url);
+    return await runtime.fetch(url, init);
   }
 }
 
@@ -50,10 +53,11 @@ export class DirectVideoDownloadDriver {
     let response: Awaited<ReturnType<DirectVideoDownloadDriver['runtime']['fetch']>>;
 
     try {
-      response = await fetchWithProxy(options.sourceUrl, this.runtime, {
-        noProxy: options.noProxy,
-        proxyUrl: options.proxyUrl
-      });
+      response = await fetchWithProxy(
+        options.sourceUrl,
+        this.runtime,
+        buildProxyOptions(options)
+      );
     } catch (error) {
       throw new VideoCommandError(
         'VIDEO_DOWNLOAD_FAILED',
@@ -185,5 +189,18 @@ function formatETA(seconds: number): string {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function buildProxyOptions(options: {
+  noProxy?: boolean;
+  proxyUrl?: string;
+}): {
+  noProxy?: boolean;
+  proxyUrl?: string;
+} {
+  return {
+    ...(options.noProxy === undefined ? {} : { noProxy: options.noProxy }),
+    ...(options.proxyUrl === undefined ? {} : { proxyUrl: options.proxyUrl })
+  };
 }
 /* c8 ignore stop */

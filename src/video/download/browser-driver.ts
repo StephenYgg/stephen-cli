@@ -26,7 +26,7 @@ export class BrowserDownloadDriver {
       const context = await browser.newContext();
       const page = await context.newPage();
 
-      const downloadPromise = context.waitForEvent('download');
+      const downloadPromise = page.waitForEvent('download');
       await page.goto(options.sourceUrl, { waitUntil: 'load' });
       await page.waitForTimeout(2000);
 

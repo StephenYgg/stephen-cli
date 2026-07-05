@@ -1,5 +1,6 @@
 import { rankVideoCandidates } from './candidate.js';
 import type { VideoCandidate, VideoSniffMode, VideoSniffResult } from '../types.js';
+import { optional } from '../utils.js';
 
 export interface VideoSniffServiceDependencies {
   browserProvider: (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => Promise<VideoCandidate[]>;
@@ -16,15 +17,17 @@ export class VideoSniffService {
   }
 
   async sniff(options: { mode: VideoSniffMode; sourceUrl: string; noProxy?: boolean; proxyUrl?: string }): Promise<VideoSniffResult> {
+    const providerOptions = buildProviderOptions(options);
+
     if (options.mode === 'http') {
-      return this.createResult('http', options.sourceUrl, await this.httpProvider(options.sourceUrl, { noProxy: options.noProxy, proxyUrl: options.proxyUrl }));
+      return this.createResult('http', options.sourceUrl, await this.httpProvider(options.sourceUrl, providerOptions));
     }
 
     if (options.mode === 'browser') {
       return this.createResult(
         'browser',
         options.sourceUrl,
-        await this.browserProvider(options.sourceUrl, { noProxy: options.noProxy, proxyUrl: options.proxyUrl })
+        await this.browserProvider(options.sourceUrl, providerOptions)
       );
     }
 
@@ -32,11 +35,11 @@ export class VideoSniffService {
       return this.createResult(
         'browser',
         options.sourceUrl,
-        await this.browserProvider(options.sourceUrl, { noProxy: options.noProxy, proxyUrl: options.proxyUrl })
+        await this.browserProvider(options.sourceUrl, providerOptions)
       );
     } catch (error) {
       if (error instanceof Error && 'recoverable' in error && error.recoverable === true) {
-        return this.createResult('http', options.sourceUrl, await this.httpProvider(options.sourceUrl, { noProxy: options.noProxy, proxyUrl: options.proxyUrl }));
+        return this.createResult('http', options.sourceUrl, await this.httpProvider(options.sourceUrl, providerOptions));
       }
 
       throw error;
@@ -54,4 +57,17 @@ export class VideoSniffService {
       sourceUrl
     };
   }
+}
+
+function buildProviderOptions(options: {
+  noProxy?: boolean;
+  proxyUrl?: string;
+}): {
+  noProxy?: boolean;
+  proxyUrl?: string;
+} {
+  return {
+    ...optional('noProxy', options.noProxy),
+    ...optional('proxyUrl', options.proxyUrl)
+  };
 }

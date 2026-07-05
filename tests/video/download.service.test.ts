@@ -39,7 +39,7 @@ describe('VideoDownloadService', () => {
       expect(directDriver.download).not.toHaveBeenCalled();
     });
 
-    it('uses browserDriver for direct m3u8 URLs when available', async () => {
+    it('uses hlsDriver for direct m3u8 URLs even when browserDriver is available', async () => {
       const browserDriver = {
         download: vi.fn(async () => ({
           mediaType: 'm3u8' as const,
@@ -48,7 +48,13 @@ describe('VideoDownloadService', () => {
         }))
       };
       const directDriver = { download: vi.fn() };
-      const hlsDriver = { download: vi.fn() };
+      const hlsDriver = {
+        download: vi.fn(async () => ({
+          mediaType: 'm3u8' as const,
+          outputPath: 'D:\\videos\\master.ts',
+          sourceUrl: 'https://cdn.example.com/master.m3u8'
+        }))
+      };
       const sniffService = { sniff: vi.fn() };
 
       const service = new VideoDownloadService({
@@ -67,10 +73,10 @@ describe('VideoDownloadService', () => {
         mediaType: 'm3u8'
       });
 
-      expect(browserDriver.download).toHaveBeenCalledWith({
+      expect(hlsDriver.download).toHaveBeenCalledWith({
         sourceUrl: 'https://cdn.example.com/master.m3u8'
       });
-      expect(hlsDriver.download).not.toHaveBeenCalled();
+      expect(browserDriver.download).not.toHaveBeenCalled();
     });
 
     it('falls back to directDriver when browserDriver is unavailable for mp4', async () => {
@@ -106,6 +112,43 @@ describe('VideoDownloadService', () => {
       });
 
       expect(directDriver.download).toHaveBeenCalled();
+    });
+
+    it('falls back to directDriver when browserDriver cannot trigger a direct mp4 download event', async () => {
+      const browserDriver = {
+        download: vi.fn(async () => {
+          throw new Error('browserContext.waitForEvent: Timeout 30000ms exceeded while waiting for event "download"');
+        })
+      };
+      const directDriver = {
+        download: vi.fn(async () => ({
+          mediaType: 'mp4' as const,
+          outputPath: 'D:\\videos\\video.mp4',
+          sourceUrl: 'https://cdn.example.com/video.mp4'
+        }))
+      };
+      const hlsDriver = { download: vi.fn() };
+      const sniffService = { sniff: vi.fn() };
+
+      const service = new VideoDownloadService({
+        directDriver,
+        hlsDriver,
+        sniffService,
+        browserDriver
+      });
+
+      await expect(
+        service.download({
+          input: 'https://cdn.example.com/video.mp4',
+          mode: 'auto'
+        })
+      ).resolves.toMatchObject({
+        mediaType: 'mp4'
+      });
+
+      expect(directDriver.download).toHaveBeenCalledWith({
+        sourceUrl: 'https://cdn.example.com/video.mp4'
+      });
     });
 
     it('uses browserDriver for page URLs when available', async () => {
