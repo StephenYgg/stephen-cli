@@ -22,6 +22,7 @@ import {
 import { createDefaultVideoRuntime, type VideoRuntime } from './video/runtime.js';
 import { createDefaultKr36Runtime, type Kr36Runtime } from './36kr/runtime.js';
 import { createDefaultToutiaoRuntime, type ToutiaoRuntime } from './toutiao/runtime.js';
+import { createDefaultHackerNewsRuntime, type HackerNewsRuntime } from './hn/runtime.js';
 
 /* v8 ignore next */
 const createDefaultReadline = () => createInterface({ input, output });
@@ -30,6 +31,7 @@ export interface CreateCliOverrides
   extends Partial<Omit<AkCliDependencies, 'getRepository'>> {
   diskRuntime?: DiskCleanupRuntime;
   env?: NodeJS.ProcessEnv;
+  hackerNewsRuntime?: HackerNewsRuntime;
   paths?: StephenCliPaths;
   repository?: AkRepository;
   kr36Runtime?: Kr36Runtime;
@@ -42,6 +44,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
   const runtimeEnv = overrides.env ?? process.env;
   const masterKey = overrides.masterKey ?? Buffer.from('0123456789abcdef0123456789abcdef', 'utf8');
   const diskRuntime = overrides.diskRuntime ?? createDiskCleanupRuntime();
+  const hackerNewsRuntime = overrides.hackerNewsRuntime ?? createDefaultHackerNewsRuntime();
   const kr36Runtime = overrides.kr36Runtime ?? createDefaultKr36Runtime();
   const toutiaoRuntime = overrides.toutiaoRuntime ?? createDefaultToutiaoRuntime();
   const videoRuntime = overrides.videoRuntime ?? createDefaultVideoRuntime();
@@ -93,6 +96,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
     diskRuntime,
     env: runtimeEnv,
     getRepository,
+    hackerNewsRuntime,
     kr36Runtime,
     masterKey,
     now: overrides.now ?? (() => new Date().toISOString()),

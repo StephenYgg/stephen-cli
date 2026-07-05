@@ -25,6 +25,7 @@ describe('stephen smoke tests', () => {
     expect(stdout).toContain('ak');
     expect(stdout).toContain('config');
     expect(stdout).toContain('disk');
+    expect(stdout).toContain('hn');
     expect(stdout).toContain('toutiao');
   });
 });

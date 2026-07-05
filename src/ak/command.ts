@@ -24,12 +24,15 @@ import { handleKr36CommandError, registerKr36Commands } from '../36kr/command.js
 import type { Kr36Runtime } from '../36kr/runtime.js';
 import { handleToutiaoCommandError, registerToutiaoCommands } from '../toutiao/command.js';
 import type { ToutiaoRuntime } from '../toutiao/runtime.js';
+import { handleHackerNewsCommandError, registerHackerNewsCommands } from '../hn/command.js';
+import type { HackerNewsRuntime } from '../hn/runtime.js';
 
 export interface AkCliDependencies {
   confirm: (message: string) => Promise<boolean>;
   diskRuntime: DiskCleanupRuntime;
   env: NodeJS.ProcessEnv;
   getRepository: () => AkRepository;
+  hackerNewsRuntime: HackerNewsRuntime;
   kr36Runtime: Kr36Runtime;
   masterKey: Buffer;
   now: () => string;
@@ -167,6 +170,11 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
   });
   registerToutiaoCommands(program, {
     runtime: dependencies.toutiaoRuntime,
+    stderr: dependencies.stderr,
+    stdout: dependencies.stdout
+  });
+  registerHackerNewsCommands(program, {
+    runtime: dependencies.hackerNewsRuntime,
     stderr: dependencies.stderr,
     stdout: dependencies.stdout
   });
@@ -369,6 +377,14 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
 
         if (toutiaoExitCode !== undefined) {
           return toutiaoExitCode;
+        }
+
+        const hackerNewsExitCode = handleHackerNewsCommandError(error, {
+          stderr: dependencies.stderr
+        });
+
+        if (hackerNewsExitCode !== undefined) {
+          return hackerNewsExitCode;
         }
 
         if (error instanceof ZodError) {
