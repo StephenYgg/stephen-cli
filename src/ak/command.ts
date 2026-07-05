@@ -22,6 +22,8 @@ import { handleVideoCommandError, registerVideoCommands } from '../video/command
 import type { VideoRuntime } from '../video/runtime.js';
 import { handleKr36CommandError, registerKr36Commands } from '../36kr/command.js';
 import type { Kr36Runtime } from '../36kr/runtime.js';
+import { handleToutiaoCommandError, registerToutiaoCommands } from '../toutiao/command.js';
+import type { ToutiaoRuntime } from '../toutiao/runtime.js';
 
 export interface AkCliDependencies {
   confirm: (message: string) => Promise<boolean>;
@@ -35,6 +37,7 @@ export interface AkCliDependencies {
   resolveDiskCleanupRoots: () => DiskCleanupRoots;
   stderr: (value: string) => void;
   stdout: (value: string) => void;
+  toutiaoRuntime: ToutiaoRuntime;
   videoRuntime: VideoRuntime;
 }
 
@@ -159,6 +162,11 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
   });
   registerKr36Commands(program, {
     runtime: dependencies.kr36Runtime,
+    stderr: dependencies.stderr,
+    stdout: dependencies.stdout
+  });
+  registerToutiaoCommands(program, {
+    runtime: dependencies.toutiaoRuntime,
     stderr: dependencies.stderr,
     stdout: dependencies.stdout
   });
@@ -353,6 +361,14 @@ export function createAkCli(dependencies: AkCliDependencies): AkCliRunner {
 
         if (kr36ExitCode !== undefined) {
           return kr36ExitCode;
+        }
+
+        const toutiaoExitCode = handleToutiaoCommandError(error, {
+          stderr: dependencies.stderr
+        });
+
+        if (toutiaoExitCode !== undefined) {
+          return toutiaoExitCode;
         }
 
         if (error instanceof ZodError) {

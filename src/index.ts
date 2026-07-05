@@ -21,6 +21,7 @@ import {
 } from './disk/runtime.js';
 import { createDefaultVideoRuntime, type VideoRuntime } from './video/runtime.js';
 import { createDefaultKr36Runtime, type Kr36Runtime } from './36kr/runtime.js';
+import { createDefaultToutiaoRuntime, type ToutiaoRuntime } from './toutiao/runtime.js';
 
 /* v8 ignore next */
 const createDefaultReadline = () => createInterface({ input, output });
@@ -32,6 +33,7 @@ export interface CreateCliOverrides
   paths?: StephenCliPaths;
   repository?: AkRepository;
   kr36Runtime?: Kr36Runtime;
+  toutiaoRuntime?: ToutiaoRuntime;
   videoRuntime?: VideoRuntime;
 }
 
@@ -41,6 +43,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
   const masterKey = overrides.masterKey ?? Buffer.from('0123456789abcdef0123456789abcdef', 'utf8');
   const diskRuntime = overrides.diskRuntime ?? createDiskCleanupRuntime();
   const kr36Runtime = overrides.kr36Runtime ?? createDefaultKr36Runtime();
+  const toutiaoRuntime = overrides.toutiaoRuntime ?? createDefaultToutiaoRuntime();
   const videoRuntime = overrides.videoRuntime ?? createDefaultVideoRuntime();
 
   // Use promise caching to prevent race conditions when multiple concurrent
@@ -97,6 +100,7 @@ export function createCli(overrides: CreateCliOverrides = {}) {
     resolveDiskCleanupRoots: () => resolveDiskCleanupRoots(runtimeEnv),
     stderr: overrides.stderr ?? ((value) => process.stderr.write(value)),
     stdout: overrides.stdout ?? ((value) => process.stdout.write(value)),
+    toutiaoRuntime,
     videoRuntime
   });
 }
