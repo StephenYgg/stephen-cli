@@ -10,12 +10,18 @@ const articleHtml = `
 window.initialState={"articleDetail":{"articleDetailData":{"data":{"itemId":3853011900142848,"widgetTitle":"硬氪首发 | 海洋具身智能公司「世航智能」拿下创纪录10亿融资，朱啸虎押注","summary":"上半年订单超10亿元。","author":"邱晓芬","authorId":1199336245,"authorFace":"https://img.example.com/author.jpg","authorRoute":"detail_author?userId=1199336245","publishTime":1781488200127,"widgetContent":"<p>作者&nbsp;|&nbsp;邱晓芬</p><p>正文</p>","sourceType":"original","imgSources":[],"popinImage":"https://img.example.com/cover.jpg","companyCertifyNick":"邱晓芬官方企业号"}},"articleRecommendData":{"statPraise":42,"statComment":0,"statCollect":5,"statArticle":858,"authorName":"邱晓芬","authorTitle":"作者","authorSummary":"关注科技","authorFace":"https://img.example.com/author.jpg","newestItemList":[],"relateArticleList":[]},"favoriteCount":5,"likeCount":42,"organArticleData":{"data":{"organizationList":[]}},"latestArticle":{"articleLatestList":[]}}};
 </script>`;
 
+const informationHtml = `
+<script>
+window.initialState={"information":{"informationList":{"itemList":[{"itemId":3882467938040710,"itemType":10,"templateMaterial":{"itemId":3882467938040710,"templateType":1,"widgetImage":"https://img.example.com/first.jpg","publishTime":1783240283508,"widgetTitle":"MiniMax M3：一家AI公司，为什么开始重新定义自己的价值？","summary":"当模型能力逐渐趋同时，一家 AI 公司还能依靠什么建立长期价值？","authorName":"奇点湃","authorRoute":"detail_author?userId=5653862"},"route":"detail_article?itemId=3882467938040710","siteId":1}],"pageCallback":"first-callback","hasNextPage":0}}};
+</script>`;
+
 describe('stephen 36kr command', () => {
   it('fetches an article by id and renders JSON by default', async () => {
     let stdout = '';
     let stderr = '';
     const runtime: Kr36Runtime = {
-      fetchArticleHtml: vi.fn(async () => articleHtml)
+      fetchArticleHtml: vi.fn(async () => articleHtml),
+      fetchJson: vi.fn()
     };
     const cli = createCli({
       kr36Runtime: runtime,
@@ -54,7 +60,8 @@ describe('stephen 36kr command', () => {
     let stderr = '';
     const cli = createCli({
       kr36Runtime: {
-        fetchArticleHtml: vi.fn()
+        fetchArticleHtml: vi.fn(),
+        fetchJson: vi.fn()
       },
       repository: new AkRepository(createAkDatabase(':memory:')),
       stderr: (value) => {
@@ -67,5 +74,61 @@ describe('stephen 36kr command', () => {
 
     expect(exitCode).toBe(2);
     expect(stderr).toContain('"code": "KR36_INVALID_ARTICLE_ID"');
+  });
+
+  it('fetches a supported information channel and renders JSON by default', async () => {
+    let stdout = '';
+    const runtime: Kr36Runtime = {
+      fetchArticleHtml: vi.fn(async () => informationHtml),
+      fetchJson: vi.fn()
+    };
+    const cli = createCli({
+      kr36Runtime: runtime,
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stderr: () => undefined,
+      stdout: (value) => {
+        stdout += value;
+      }
+    });
+
+    const exitCode = await cli.run(['36kr', 'list', 'AI', '--pages', '1']);
+    const parsed = JSON.parse(stdout) as {
+      data: {
+        channel: string;
+        items: Array<{ authorName: string; id: number; title: string }>;
+        meta: { totalItems: number };
+      };
+      ok: boolean;
+    };
+
+    expect(exitCode).toBe(0);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.data.channel).toBe('AI');
+    expect(parsed.data.items[0]).toMatchObject({
+      authorName: '奇点湃',
+      id: 3882467938040710,
+      title: 'MiniMax M3：一家AI公司，为什么开始重新定义自己的价值？'
+    });
+    expect(parsed.data.meta.totalItems).toBe(1);
+  });
+
+  it('rejects unsupported information channels at the CLI boundary', async () => {
+    let stderr = '';
+    const cli = createCli({
+      kr36Runtime: {
+        fetchArticleHtml: vi.fn(),
+        fetchJson: vi.fn()
+      },
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stderr: (value) => {
+        stderr += value;
+      },
+      stdout: () => undefined
+    });
+
+    const exitCode = await cli.run(['36kr', 'list', 'travel']);
+
+    expect(exitCode).toBe(2);
+    expect(stderr).toContain('"code": "KR36_INVALID_CHANNEL"');
   });
 });

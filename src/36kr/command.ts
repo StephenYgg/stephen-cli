@@ -1,7 +1,11 @@
 import type { Command } from 'commander';
 import { z } from 'zod';
 
-import { renderKr36ArticleAsJson, renderKr36CommandErrorAsJson } from './output.js';
+import {
+  renderKr36ArticleAsJson,
+  renderKr36CommandErrorAsJson,
+  renderKr36InformationListAsJson
+} from './output.js';
 import type { Kr36Runtime } from './runtime.js';
 import { Kr36ArticleService } from './service.js';
 import { Kr36CommandError } from './types.js';
@@ -14,6 +18,11 @@ export interface Kr36CommandDependencies {
 
 const articleOptionsSchema = z.object({
   format: z.enum(['json']).default('json')
+});
+
+const informationListOptionsSchema = z.object({
+  format: z.enum(['json']).default('json'),
+  pages: z.number().int().min(1).max(20).default(1)
 });
 
 export function registerKr36Commands(
@@ -31,6 +40,19 @@ export function registerKr36Commands(
       const article = await articleService.getArticle(articleId);
       dependencies.stdout(`${renderKr36ArticleAsJson(article)}\n`);
     });
+
+  kr36.command('list')
+    .argument('<channel>', '36kr information channel: AI or technology')
+    .option('--pages <pages>', 'number of pages to fetch', parsePages, 1)
+    .option('--format <format>', 'output format', 'json')
+    .action(async (channel, options) => {
+      const parsed = informationListOptionsSchema.parse(options);
+      const list = await articleService.getInformationList({
+        channel,
+        pages: parsed.pages
+      });
+      dependencies.stdout(`${renderKr36InformationListAsJson(list)}\n`);
+    });
 }
 
 export function handleKr36CommandError(
@@ -45,4 +67,21 @@ export function handleKr36CommandError(
   }
 
   return undefined;
+}
+
+function parsePages(value: string): number {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    throw new Kr36CommandError(
+      'KR36_INVALID_PAGES',
+      '36kr list pages must be an integer between 1 and 20.',
+      2,
+      {
+        pages: value
+      }
+    );
+  }
+
+  return parsed;
 }

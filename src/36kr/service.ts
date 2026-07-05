@@ -7,6 +7,10 @@ import {
   type Kr36ArticleListItem,
   type Kr36ArticleOrganization,
   type Kr36ArticleStats,
+  type Kr36InformationChannel,
+  type Kr36InformationItem,
+  type Kr36InformationList,
+  type Kr36JsonRequest,
   type Kr36Request
 } from './types.js';
 
@@ -25,6 +29,18 @@ export const KR36_BROWSER_HEADERS: Record<string, string> = {
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 };
 
+const KR36_INFORMATION_ENDPOINT = 'https://gateway.36kr.com/api/mis/nav/ifm/subNav/flow';
+const KR36_INFORMATION_PAGE_SIZE = 30;
+const KR36_SUPPORTED_CHANNELS = new Set<Kr36InformationChannel>(['AI', 'technology']);
+
+const KR36_JSON_HEADERS: Record<string, string> = {
+  Accept: 'application/json, text/plain, */*',
+  'Accept-Language': KR36_BROWSER_HEADERS['Accept-Language']!,
+  'Content-Type': 'application/json;charset=UTF-8',
+  Origin: 'https://36kr.com',
+  'User-Agent': KR36_BROWSER_HEADERS['User-Agent']!
+};
+
 interface Kr36InitialState {
   articleDetail?: {
     articleDetailData?: {
@@ -41,6 +57,9 @@ interface Kr36InitialState {
     latestArticle?: {
       articleLatestList?: Array<{ id: number; title: string }>;
     };
+  };
+  information?: {
+    informationList?: Kr36RawInformationList;
   };
 }
 
@@ -94,8 +113,33 @@ interface Kr36RawRecommendData {
   statPraise?: number;
 }
 
+interface Kr36RawInformationList {
+  hasNextPage?: number;
+  itemList?: Kr36RawInformationItem[];
+  pageCallback?: string;
+}
+
+interface Kr36RawInformationItem {
+  itemId: number;
+  route?: string;
+  templateMaterial?: {
+    authorName?: string;
+    authorRoute?: string;
+    publishTime?: number;
+    summary?: string;
+    widgetImage?: string;
+    widgetTitle?: string;
+  };
+}
+
+interface Kr36InformationFlowResponse {
+  code?: number;
+  data?: Kr36RawInformationList;
+  msg?: string;
+}
+
 export class Kr36ArticleService {
-  constructor(private readonly runtime: Pick<Kr36Runtime, 'fetchArticleHtml'>) {}
+  constructor(private readonly runtime: Pick<Kr36Runtime, 'fetchArticleHtml' | 'fetchJson'>) {}
 
   async getArticle(articleId: string): Promise<Kr36Article> {
     assertArticleId(articleId);
@@ -210,6 +254,58 @@ export class Kr36ArticleService {
 
     return article;
   }
+
+  async getInformationList(options: {
+    channel: string;
+    pages?: number;
+  }): Promise<Kr36InformationList> {
+    const channel = parseInformationChannel(options.channel);
+    const pageLimit = normalizePages(options.pages);
+    const firstPageRequest = buildKr36InformationFirstPageRequest(channel);
+    const firstPageHtml = await this.runtime.fetchArticleHtml(firstPageRequest);
+    const firstPageState = parseInitialState(firstPageHtml);
+    const firstPageList = firstPageState.information?.informationList;
+
+    if (!firstPageList) {
+      throw new Kr36CommandError(
+        'KR36_PARSE_ERROR',
+        '36kr information list data was not found in window.initialState.',
+        2
+      );
+    }
+
+    const items = [...mapInformationItems(firstPageList.itemList ?? [])];
+    let pageCallback = firstPageList.pageCallback ?? '';
+    let hasNextPage = firstPageList.hasNextPage ?? 0;
+    let fetchedPages = 1;
+
+    while (fetchedPages < pageLimit && hasNextPage && pageCallback) {
+      const request = buildKr36InformationNextPageRequest(channel, pageCallback);
+      const response = parseInformationFlowResponse(await this.runtime.fetchJson(request));
+      const nextList = response.data ?? {};
+
+      items.push(...mapInformationItems(nextList.itemList ?? []));
+      pageCallback = nextList.pageCallback ?? '';
+      hasNextPage = nextList.hasNextPage ?? 0;
+      fetchedPages += 1;
+    }
+
+    return {
+      channel,
+      items,
+      meta: {
+        fetchedPages,
+        hasNextPage,
+        nextPageCallback: pageCallback,
+        pageSize: KR36_INFORMATION_PAGE_SIZE,
+        totalItems: items.length
+      },
+      request: {
+        firstPage: firstPageRequest,
+        nextPageEndpoint: KR36_INFORMATION_ENDPOINT
+      }
+    };
+  }
 }
 
 export function buildKr36ArticleUrl(articleId: string): string {
@@ -224,6 +320,40 @@ export function buildKr36ArticleRequest(articleId: string): Kr36Request {
   };
 }
 
+export function buildKr36InformationFirstPageRequest(channel: Kr36InformationChannel): Kr36Request {
+  return {
+    headers: KR36_BROWSER_HEADERS,
+    url: `https://36kr.com/information/${channel}/`
+  };
+}
+
+export function buildKr36InformationNextPageRequest(
+  channel: Kr36InformationChannel,
+  pageCallback: string,
+  timestamp = Date.now()
+): Kr36JsonRequest {
+  return {
+    body: {
+      partner_id: 'web',
+      timestamp,
+      param: {
+        subnavType: 1,
+        subnavNick: channel,
+        pageSize: KR36_INFORMATION_PAGE_SIZE,
+        pageEvent: 1,
+        pageCallback,
+        siteId: 1,
+        platformId: 2
+      }
+    },
+    headers: {
+      ...KR36_JSON_HEADERS,
+      Referer: `https://36kr.com/information/${channel}/`
+    },
+    url: KR36_INFORMATION_ENDPOINT
+  };
+}
+
 function assertArticleId(articleId: string): void {
   if (!/^\d+$/.test(articleId)) {
     throw new Kr36CommandError(
@@ -235,6 +365,39 @@ function assertArticleId(articleId: string): void {
       }
     );
   }
+}
+
+function parseInformationChannel(channel: string): Kr36InformationChannel {
+  if (KR36_SUPPORTED_CHANNELS.has(channel as Kr36InformationChannel)) {
+    return channel as Kr36InformationChannel;
+  }
+
+  throw new Kr36CommandError(
+    'KR36_INVALID_CHANNEL',
+    '36kr list only supports AI and technology channels.',
+    2,
+    {
+      channel,
+      supportedChannels: [...KR36_SUPPORTED_CHANNELS]
+    }
+  );
+}
+
+function normalizePages(pages: number | undefined): number {
+  const value = pages ?? 1;
+
+  if (!Number.isInteger(value) || value < 1 || value > 20) {
+    throw new Kr36CommandError(
+      'KR36_INVALID_PAGES',
+      '36kr list pages must be an integer between 1 and 20.',
+      2,
+      {
+        pages: value
+      }
+    );
+  }
+
+  return value;
 }
 
 function parseInitialState(html: string): Kr36InitialState {
@@ -271,6 +434,74 @@ function extractImages(html: string): Kr36ArticleImage[] {
       url: getAttribute(tag, 'src') ?? ''
     };
   }).filter((image) => image.url);
+}
+
+function parseInformationFlowResponse(jsonText: string): Kr36InformationFlowResponse {
+  try {
+    const response = JSON.parse(jsonText) as Kr36InformationFlowResponse;
+
+    if (response.code !== 0) {
+      throw new Kr36CommandError(
+        'KR36_REQUEST_FAILED',
+        response.msg || '36kr information flow request failed.',
+        1,
+        {
+          code: response.code
+        }
+      );
+    }
+
+    return response;
+  } catch (error) {
+    if (error instanceof Kr36CommandError) {
+      throw error;
+    }
+
+    throw new Kr36CommandError(
+      'KR36_PARSE_ERROR',
+      'Failed to parse 36kr information flow response.',
+      2,
+      {
+        cause: error instanceof Error ? error.message : String(error)
+      }
+    );
+  }
+}
+
+function mapInformationItems(items: Kr36RawInformationItem[]): Kr36InformationItem[] {
+  return items.map((item) => {
+    const material = item.templateMaterial ?? {};
+    const mapped: Kr36InformationItem = {
+      id: item.itemId,
+      title: material.widgetTitle ?? '',
+      url: `https://36kr.com/p/${item.itemId}`
+    };
+
+    if (material.authorName !== undefined) {
+      mapped.authorName = material.authorName;
+    }
+    if (material.authorRoute !== undefined) {
+      mapped.authorRoute = material.authorRoute;
+    }
+    if (material.widgetImage !== undefined) {
+      mapped.image = material.widgetImage;
+    }
+    if (material.publishTime !== undefined) {
+      mapped.publishTime = {
+        iso: new Date(material.publishTime).toISOString(),
+        local: formatChinaTime(material.publishTime),
+        ms: material.publishTime
+      };
+    }
+    if (item.route !== undefined) {
+      mapped.route = item.route;
+    }
+    if (material.summary !== undefined) {
+      mapped.summary = material.summary;
+    }
+
+    return mapped;
+  });
 }
 
 function extractParagraphs(html: string): string[] {

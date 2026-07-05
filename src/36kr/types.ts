@@ -3,6 +3,12 @@ export interface Kr36Request {
   url: string;
 }
 
+export interface Kr36JsonRequest {
+  body: unknown;
+  headers: Record<string, string>;
+  url: string;
+}
+
 export interface Kr36ArticleAuthor {
   face?: string;
   id?: number;
@@ -72,6 +78,40 @@ export interface Kr36Article {
   summary: string;
   title: string;
   url: string;
+}
+
+export type Kr36InformationChannel = 'AI' | 'technology';
+
+export interface Kr36InformationItem {
+  authorName?: string;
+  authorRoute?: string;
+  id: number;
+  image?: string;
+  publishTime?: {
+    iso: string;
+    local: string;
+    ms: number;
+  };
+  route?: string;
+  summary?: string;
+  title: string;
+  url: string;
+}
+
+export interface Kr36InformationList {
+  channel: Kr36InformationChannel;
+  items: Kr36InformationItem[];
+  meta: {
+    fetchedPages: number;
+    hasNextPage: number;
+    nextPageCallback: string;
+    pageSize: number;
+    totalItems: number;
+  };
+  request: {
+    firstPage: Kr36Request;
+    nextPageEndpoint: string;
+  };
 }
 
 export class Kr36CommandError extends Error {
