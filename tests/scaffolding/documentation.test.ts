@@ -41,9 +41,9 @@ describe('project documentation', () => {
     const license = readFileSync('LICENSE', 'utf8');
 
     expect(packageJson.repository?.type).toBe('git');
-    expect(packageJson.repository?.url).toContain('gitee.com/ywmblue/personal-cli.git');
-    expect(packageJson.homepage).toContain('gitee.com/ywmblue/personal-cli');
-    expect(packageJson.bugs?.url).toContain('gitee.com/ywmblue/personal-cli/issues');
+    expect(packageJson.repository?.url).toContain('github.com/StephenYgg/stephen-cli.git');
+    expect(packageJson.homepage).toContain('github.com/StephenYgg/stephen-cli');
+    expect(packageJson.bugs?.url).toContain('github.com/StephenYgg/stephen-cli/issues');
     expect(license).toContain('MIT License');
   });
 });

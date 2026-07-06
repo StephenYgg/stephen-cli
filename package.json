@@ -1,14 +1,14 @@
 {
   "name": "@stephenyang/stephen",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A personal TypeScript CLI for agent-friendly workflows.",
-  "homepage": "https://gitee.com/ywmblue/personal-cli",
+  "homepage": "https://github.com/StephenYgg/stephen-cli",
   "bugs": {
-    "url": "https://gitee.com/ywmblue/personal-cli/issues"
+    "url": "https://github.com/StephenYgg/stephen-cli/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitee.com/ywmblue/personal-cli.git"
+    "url": "git+https://github.com/StephenYgg/stephen-cli.git"
   },
   "type": "module",
   "bin": {
