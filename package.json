@@ -1,6 +1,6 @@
 {
   "name": "stephen",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "A personal TypeScript CLI for agent-friendly workflows.",
   "homepage": "https://gitee.com/ywmblue/personal-cli",
   "bugs": {
