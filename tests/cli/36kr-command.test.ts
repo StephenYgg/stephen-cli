@@ -112,6 +112,30 @@ describe('stephen 36kr command', () => {
     expect(parsed.data.meta.totalItems).toBe(1);
   });
 
+  it('renders information channel results as a table with -t', async () => {
+    let stdout = '';
+    const runtime: Kr36Runtime = {
+      fetchArticleHtml: vi.fn(async () => informationHtml),
+      fetchJson: vi.fn()
+    };
+    const cli = createCli({
+      kr36Runtime: runtime,
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stdout: (value) => {
+        stdout += value;
+      }
+    });
+
+    const exitCode = await cli.run(['36kr', 'list', 'AI', '--pages', '1', '-t']);
+
+    expect(exitCode).toBe(0);
+    expect(() => JSON.parse(stdout)).toThrow();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('title');
+    expect(stdout).toContain('MiniMax M3');
+    expect(stdout).toContain('奇点湃');
+  });
+
   it('rejects unsupported information channels at the CLI boundary', async () => {
     let stderr = '';
     const cli = createCli({

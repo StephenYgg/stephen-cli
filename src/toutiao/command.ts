@@ -4,8 +4,10 @@ import { z } from 'zod';
 import {
   renderToutiaoArticleAsJson,
   renderToutiaoAuthorAsJson,
+  renderToutiaoAuthorAsTable,
   renderToutiaoCommandErrorAsJson,
-  renderToutiaoListAsJson
+  renderToutiaoListAsJson,
+  renderToutiaoListAsTable
 } from './output.js';
 import type { ToutiaoRuntime } from './runtime.js';
 import { ToutiaoService } from './service.js';
@@ -18,8 +20,9 @@ export interface ToutiaoCommandDependencies {
 }
 
 const listOptionsSchema = z.object({
-  format: z.enum(['json']).default('json'),
-  pages: z.number().int().min(1).max(5).default(1)
+  format: z.enum(['json', 'table']).default('json'),
+  pages: z.number().int().min(1).max(5).default(1),
+  table: z.boolean().optional()
 });
 
 const articleOptionsSchema = z.object({
@@ -27,8 +30,9 @@ const articleOptionsSchema = z.object({
 });
 
 const authorOptionsSchema = z.object({
-  format: z.enum(['json']).default('json'),
+  format: z.enum(['json', 'table']).default('json'),
   pages: z.number().int().min(1).max(5).default(1),
+  table: z.boolean().optional(),
   withContent: z.boolean().default(false)
 });
 
@@ -52,13 +56,18 @@ export function registerToutiaoCommands(
     .argument('<source>', 'Toutiao source: tech, AI, 光刻机, 芯片, or 半导体')
     .option('--pages <pages>', 'number of pages to fetch', parsePages, 1)
     .option('--format <format>', 'output format', 'json')
+    .option('-t, --table', 'render as a table')
     .action(async (source, options) => {
-      const parsed = listOptionsSchema.parse(options);
+      const parsed = listOptionsSchema.parse(applyTableShortcut(options));
       const result = await service.list({
         pages: parsed.pages,
         source
       });
-      dependencies.stdout(`${renderToutiaoListAsJson(result)}\n`);
+      dependencies.stdout(
+        parsed.format === 'table'
+          ? `${renderToutiaoListAsTable(result)}\n`
+          : `${renderToutiaoListAsJson(result)}\n`
+      );
     });
 
   toutiao.command('author')
@@ -66,13 +75,18 @@ export function registerToutiaoCommands(
     .option('--pages <pages>', 'number of pages to fetch', parsePages, 1)
     .option('--with-content', 'also fetch detail content for each author article')
     .option('--format <format>', 'output format', 'json')
+    .option('-t, --table', 'render as a table')
     .action(async (author, options) => {
-      const parsed = authorOptionsSchema.parse(options);
+      const parsed = authorOptionsSchema.parse(applyTableShortcut(options));
       const result = await service.author(author, {
         pages: parsed.pages,
         withContent: parsed.withContent
       });
-      dependencies.stdout(`${renderToutiaoAuthorAsJson(result)}\n`);
+      dependencies.stdout(
+        parsed.format === 'table'
+          ? `${renderToutiaoAuthorAsTable(result)}\n`
+          : `${renderToutiaoAuthorAsJson(result)}\n`
+      );
     });
 }
 
@@ -105,4 +119,20 @@ function parsePages(value: string): number {
   }
 
   return parsed;
+}
+
+function applyTableShortcut<T extends { format?: string; table?: boolean }>(options: T): T & {
+  format: 'json' | 'table';
+} {
+  if (options.table) {
+    return {
+      ...options,
+      format: 'table'
+    };
+  }
+
+  return {
+    ...options,
+    format: (options.format ?? 'json') as 'json' | 'table'
+  };
 }

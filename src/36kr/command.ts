@@ -4,7 +4,8 @@ import { z } from 'zod';
 import {
   renderKr36ArticleAsJson,
   renderKr36CommandErrorAsJson,
-  renderKr36InformationListAsJson
+  renderKr36InformationListAsJson,
+  renderKr36InformationListAsTable
 } from './output.js';
 import type { Kr36Runtime } from './runtime.js';
 import { Kr36ArticleService } from './service.js';
@@ -21,8 +22,9 @@ const articleOptionsSchema = z.object({
 });
 
 const informationListOptionsSchema = z.object({
-  format: z.enum(['json']).default('json'),
-  pages: z.number().int().min(1).max(20).default(1)
+  format: z.enum(['json', 'table']).default('json'),
+  pages: z.number().int().min(1).max(20).default(1),
+  table: z.boolean().optional()
 });
 
 export function registerKr36Commands(
@@ -45,13 +47,18 @@ export function registerKr36Commands(
     .argument('<channel>', '36kr information channel: AI or technology')
     .option('--pages <pages>', 'number of pages to fetch', parsePages, 1)
     .option('--format <format>', 'output format', 'json')
+    .option('-t, --table', 'render as a table')
     .action(async (channel, options) => {
-      const parsed = informationListOptionsSchema.parse(options);
+      const parsed = informationListOptionsSchema.parse(applyTableShortcut(options));
       const list = await articleService.getInformationList({
         channel,
         pages: parsed.pages
       });
-      dependencies.stdout(`${renderKr36InformationListAsJson(list)}\n`);
+      dependencies.stdout(
+        parsed.format === 'table'
+          ? `${renderKr36InformationListAsTable(list)}\n`
+          : `${renderKr36InformationListAsJson(list)}\n`
+      );
     });
 }
 
@@ -84,4 +91,20 @@ function parsePages(value: string): number {
   }
 
   return parsed;
+}
+
+function applyTableShortcut<T extends { format?: string; table?: boolean }>(options: T): T & {
+  format: 'json' | 'table';
+} {
+  if (options.table) {
+    return {
+      ...options,
+      format: 'table'
+    };
+  }
+
+  return {
+    ...options,
+    format: (options.format ?? 'json') as 'json' | 'table'
+  };
 }

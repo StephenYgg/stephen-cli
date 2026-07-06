@@ -143,6 +143,26 @@ describe('stephen toutiao command', () => {
     });
   });
 
+  it('renders channel results as a table with -t', async () => {
+    let stdout = '';
+    const runtime = createRuntime();
+    const cli = createCli({
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stdout: (value) => {
+        stdout += value;
+      },
+      toutiaoRuntime: runtime
+    });
+
+    const exitCode = await cli.run(['toutiao', 'list', 'AI', '--pages', '1', '-t']);
+
+    expect(exitCode).toBe(0);
+    expect(() => JSON.parse(stdout)).toThrow();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('title');
+    expect(stdout).toContain('谷歌才是AI相机鼻祖');
+  });
+
   it('renders unsupported source errors as JSON', async () => {
     let stderr = '';
     const cli = createCli({
@@ -192,6 +212,33 @@ describe('stephen toutiao command', () => {
       pages: 1,
       url: 'https://www.toutiao.com/c/user/token/MS4wLjABAAAAulU9CSwHtRjcF9bakxqiK8uYN7UQi2m8KFaNukylH80/'
     });
+  });
+
+  it('renders an author feed as a table with -t', async () => {
+    let stdout = '';
+    const runtime = createRuntime();
+    const cli = createCli({
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stdout: (value) => {
+        stdout += value;
+      },
+      toutiaoRuntime: runtime
+    });
+
+    const exitCode = await cli.run([
+      'toutiao',
+      'author',
+      'MS4wLjABAAAAulU9CSwHtRjcF9bakxqiK8uYN7UQi2m8KFaNukylH80',
+      '--pages',
+      '1',
+      '-t'
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(() => JSON.parse(stdout)).toThrow();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('title');
+    expect(stdout).toContain('刚刚，谷歌发布了一台 AI 硬件');
   });
 
   it('fetches an author feed with article content when requested', async () => {

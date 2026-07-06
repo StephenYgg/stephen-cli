@@ -125,6 +125,46 @@ describe('stephen hn command', () => {
     });
   });
 
+  it('renders story lists as a table with -t', async () => {
+    let stdout = '';
+    const runtime = createRuntime();
+    const cli = createCli({
+      hackerNewsRuntime: runtime,
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stdout: (value) => {
+        stdout += value;
+      }
+    });
+
+    const exitCode = await cli.run(['hn', 'top', '--limit', '1', '-t']);
+
+    expect(exitCode).toBe(0);
+    expect(() => JSON.parse(stdout)).toThrow();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('title');
+    expect(stdout).toContain('top story');
+  });
+
+  it('renders search results as a table with -t', async () => {
+    let stdout = '';
+    const runtime = createRuntime();
+    const cli = createCli({
+      hackerNewsRuntime: runtime,
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stdout: (value) => {
+        stdout += value;
+      }
+    });
+
+    const exitCode = await cli.run(['hn', 'search', 'rust', '--limit', '1', '-t']);
+
+    expect(exitCode).toBe(0);
+    expect(() => JSON.parse(stdout)).toThrow();
+    expect(stdout).toContain('id');
+    expect(stdout).toContain('title');
+    expect(stdout).toContain('Why Discord is switching from Go to Rust');
+  });
+
   it('renders invalid limit errors as JSON', async () => {
     let stderr = '';
     const cli = createCli({
