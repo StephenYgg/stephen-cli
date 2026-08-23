@@ -1,4 +1,13 @@
+import {
+  isHlsMediaUrl,
+  isNoiseMediaUrl,
+  isTemplateHlsUrl,
+  unescapeMediaText
+} from '../media-url.js';
 import type { VideoCandidate, VideoCandidateOrigin, VideoCandidateType } from '../types.js';
+
+const MEDIA_URL_RE =
+  /https?:\/\/[^\s"'<>]+?\.(m3u8|mp4)(?:\?[^\s"'<>]*)?(?=["'\s<>\\#]|$)/gi;
 
 export function createVideoCandidate(
   type: VideoCandidateType,
@@ -47,11 +56,19 @@ export function extractVideoCandidatesFromText(
   text: string,
   origin: Exclude<VideoCandidateOrigin, 'network' | 'direct-input'>
 ): VideoCandidate[] {
-  const matches = text.matchAll(/https?:\/\/[^\s"'<>]+?\.(m3u8|mp4)(?:\?[^\s"'<>]*)?/gi);
+  const matches = unescapeMediaText(text).matchAll(MEDIA_URL_RE);
+  const candidates: VideoCandidate[] = [];
 
-  return rankVideoCandidates(
-    [...matches].map((match) =>
-      createVideoCandidate(match[1]?.toLowerCase() === 'm3u8' ? 'm3u8' : 'mp4', match[0], origin, origin === 'html' ? 0.75 : 0.65)
-    )
-  );
+  for (const match of matches) {
+    const url = match[0];
+    if (isNoiseMediaUrl(url)) {
+      continue;
+    }
+
+    const type: VideoCandidateType = isHlsMediaUrl(url) ? 'm3u8' : 'mp4';
+    const confidence = isTemplateHlsUrl(url) ? 0.95 : origin === 'html' ? 0.75 : 0.65;
+    candidates.push(createVideoCandidate(type, url, origin, confidence));
+  }
+
+  return rankVideoCandidates(candidates);
 }

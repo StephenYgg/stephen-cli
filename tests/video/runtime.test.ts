@@ -118,6 +118,64 @@ describe('createDefaultVideoRuntime', () => {
     ]);
     expect(closeBrowserCalls).toEqual(['context', 'browser']);
     expect(createCandidateFromBrowserResponse('https://cdn.example.com/other.bin', 'application/octet-stream')).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse(
+        'https://cdn.example.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4',
+        'application/vnd.apple.mpegurl'
+      )
+    ).toMatchObject({
+      confidence: 0.95,
+      type: 'm3u8',
+      url: 'https://cdn.example.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4'
+    });
+    expect(
+      createCandidateFromBrowserResponse(
+        'https://cdn.example.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4'
+      )
+    ).toMatchObject({
+      type: 'm3u8'
+    });
+    expect(
+      createCandidateFromBrowserResponse(
+        'https://cdn.example.com/thumbs/full/hash.mp4',
+        'video/mp4'
+      )
+    ).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/live', 'application/x-mpegURL')
+    ).toMatchObject({
+      type: 'm3u8',
+      url: 'https://cdn.example.com/live'
+    });
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/chunk.m4s', 'video/iso.segment')
+    ).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/mp4a/128000/audio.m3u8')
+    ).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/mp4a/audio.mp4', 'video/mp4')
+    ).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse(
+        'https://cdn.example.com/avc1/1920x1080/video.mp4',
+        'video/mp4'
+      )
+    ).toMatchObject({
+      type: 'mp4',
+      confidence: 0.05
+    });
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/pv/preview.mp4', 'video/mp4')
+    ).toBeNull();
+    expect(
+      createCandidateFromBrowserResponse('https://cdn.example.com/media', 'video/mp4')
+    ).toMatchObject({
+      type: 'mp4',
+      url: 'https://cdn.example.com/media'
+    });
+
+
     await expect(
       sniffWithBrowserRuntime('https://example.com/watch', async () => ({}))
     ).rejects.toMatchObject({

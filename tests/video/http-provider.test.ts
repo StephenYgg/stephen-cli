@@ -50,4 +50,30 @@ describe('HttpVideoSniffProvider', () => {
       code: 'VIDEO_SNIFF_FAILED'
     });
   });
+
+  it('extracts JSON-escaped HLS template urls from player config html', async () => {
+    const provider = new HttpVideoSniffProvider({
+      runtime: {
+        fetch: vi.fn(async () => ({
+          arrayBuffer: async () => new ArrayBuffer(0),
+          headers: new Headers(),
+          ok: true,
+          status: 200,
+          text: async () =>
+            'var playerConfig = { sources: {"hlsAuto":"https:\\/\\/cdn.example.com\\/key=abc\\/media=hls4A\\/2026-08\\/_TPL_.mp4"} };'
+        }))
+      }
+    });
+
+    await expect(provider.sniff('https://example.com/watch')).resolves.toEqual([
+      {
+        confidence: 0.95,
+        mimeType: 'application/vnd.apple.mpegurl',
+        origin: 'html',
+        type: 'm3u8',
+        url: 'https://cdn.example.com/key=abc/media=hls4A/2026-08/_TPL_.mp4'
+      }
+    ]);
+  });
 });
+

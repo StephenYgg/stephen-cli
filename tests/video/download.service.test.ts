@@ -79,6 +79,43 @@ describe('VideoDownloadService', () => {
       expect(browserDriver.download).not.toHaveBeenCalled();
     });
 
+    it('uses hlsDriver for HLS-disguised mp4 template urls', async () => {
+      const templateUrl =
+        'https://cdn.example.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4';
+      const browserDriver = { download: vi.fn() };
+      const directDriver = { download: vi.fn() };
+      const hlsDriver = {
+        download: vi.fn(async () => ({
+          mediaType: 'm3u8' as const,
+          outputPath: 'D:\\videos\\_TPL_.ts',
+          sourceUrl: templateUrl
+        }))
+      };
+      const sniffService = { sniff: vi.fn() };
+      const service = new VideoDownloadService({
+        directDriver,
+        hlsDriver,
+        sniffService,
+        browserDriver
+      });
+
+      await expect(
+        service.download({
+          input: templateUrl,
+          mode: 'auto'
+        })
+      ).resolves.toMatchObject({
+        mediaType: 'm3u8'
+      });
+
+      expect(hlsDriver.download).toHaveBeenCalledWith({
+        sourceUrl: templateUrl
+      });
+      expect(browserDriver.download).not.toHaveBeenCalled();
+      expect(directDriver.download).not.toHaveBeenCalled();
+    });
+
+
     it('falls back to directDriver when browserDriver is unavailable for mp4', async () => {
       const browserDriver = {
         download: vi.fn(async () => {
@@ -197,6 +234,54 @@ describe('VideoDownloadService', () => {
       expect(browserDriver.download).toHaveBeenCalledWith({
         sourceUrl: 'https://cdn.example.com/real-video.mp4'
       });
+    });
+
+    it('uses hlsDriver for sniffed HLS candidates from page urls when browserDriver is available', async () => {
+      const hlsUrl = 'https://cdn.example.com/media=hls4A/2026-08/_TPL_.mp4';
+      const browserDriver = { download: vi.fn() };
+      const directDriver = { download: vi.fn() };
+      const hlsDriver = {
+        download: vi.fn(async () => ({
+          mediaType: 'm3u8' as const,
+          outputPath: 'D:\\videos\\_TPL_.ts',
+          sourceUrl: hlsUrl
+        }))
+      };
+      const sniffService = {
+        sniff: vi.fn(async () => ({
+          candidates: [
+            {
+              type: 'm3u8' as const,
+              url: hlsUrl,
+              origin: 'html' as const,
+              mimeType: 'application/vnd.apple.mpegurl',
+              confidence: 0.95
+            }
+          ],
+          mode: 'http' as const,
+          sourceUrl: 'https://example.com/watch'
+        }))
+      };
+      const service = new VideoDownloadService({
+        directDriver,
+        hlsDriver,
+        sniffService,
+        browserDriver
+      });
+
+      await expect(
+        service.download({
+          input: 'https://example.com/watch',
+          mode: 'http'
+        })
+      ).resolves.toMatchObject({
+        mediaType: 'm3u8'
+      });
+
+      expect(hlsDriver.download).toHaveBeenCalledWith({
+        sourceUrl: hlsUrl
+      });
+      expect(browserDriver.download).not.toHaveBeenCalled();
     });
   });
 

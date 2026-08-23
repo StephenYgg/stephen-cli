@@ -1,3 +1,4 @@
+import { isHlsMediaUrl } from '../media-url.js';
 import { VideoCommandError } from '../types.js';
 
 export function encodeUrlPath(pathname: string): string {
@@ -32,7 +33,7 @@ export function classifyVideoInput(input: string): VideoInputClassification {
     throw new VideoCommandError('VIDEO_UNSUPPORTED_INPUT', `Unsupported video input: ${input}`);
   }
 
-  if (/\.m3u8(?:\?|$)/i.test(url.href)) {
+  if (isHlsMediaUrl(url.href)) {
     return {
       kind: 'm3u8',
       url: url.href

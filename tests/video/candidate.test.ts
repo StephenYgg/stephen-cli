@@ -92,4 +92,45 @@ describe('video candidate helpers', () => {
       }
     ]);
   });
+
+  it('unescapes JSON slashes and ranks HLS template urls above ads and previews', () => {
+    const html = [
+      'sources: {"hlsAuto":"https:\\/\\/cdn.ashemaletube.com\\/key=abc,end=1\\/media=hls4A\\/2026-08\\/_TPL_.mp4"}',
+      'https://edge-hls.ads.example.com/hls/1/master/1_240p.m3u8',
+      'https://cc.example.com/pv/ast/2026-08/pv_hash.mp4',
+      'https://cdn.example.com/thumbs/ast-full/2026-08/hash.mp4-full-2.jpg',
+      'https://cdn.example.com/plain.mp4'
+    ].join('\n');
+
+    const ranked = extractVideoCandidatesFromText(html, 'html');
+
+    expect(ranked.map((candidate) => candidate.url)).toEqual([
+      'https://cdn.ashemaletube.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4',
+      'https://edge-hls.ads.example.com/hls/1/master/1_240p.m3u8',
+      'https://cdn.example.com/plain.mp4'
+    ]);
+    expect(ranked[0]).toMatchObject({
+      confidence: 0.95,
+      type: 'm3u8',
+      mimeType: 'application/vnd.apple.mpegurl'
+    });
+  });
+
+  it('keeps .mp4.m3u8 as HLS instead of truncating at .mp4', () => {
+    expect(
+      extractVideoCandidatesFromText(
+        'https://cdn.example.com/media=hls4A/2026-08/hq_hash.mp4.m3u8',
+        'html'
+      )
+    ).toEqual([
+      {
+        confidence: 0.95,
+        mimeType: 'application/vnd.apple.mpegurl',
+        origin: 'html',
+        type: 'm3u8',
+        url: 'https://cdn.example.com/media=hls4A/2026-08/hq_hash.mp4.m3u8'
+      }
+    ]);
+  });
 });
+

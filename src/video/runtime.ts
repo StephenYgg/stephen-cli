@@ -2,6 +2,7 @@ import { execFile as nodeExecFile } from 'node:child_process';
 import { writeFile as writeFileOnDisk } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
+import { isHlsMediaUrl, isNoiseMediaUrl, isTemplateHlsUrl } from './media-url.js';
 import { createVideoCandidate, rankVideoCandidates } from './sniff/candidate.js';
 import { VideoCommandError, type VideoCandidate } from './types.js';
 
@@ -165,19 +166,22 @@ export function createCandidateFromBrowserResponse(
     }
   }
 
-  // .m4s is a DASH fragment, not a playlist — skip it
-  if (/\.m4s(?:\?|$)/i.test(url)) {
+  if (/\.m4s(?:\?|$)/i.test(url) || isNoiseMediaUrl(url)) {
     return null;
   }
 
-  if (/\.m3u8(?:\?|$)/i.test(url)) {
+  const mime = contentType?.split(';')[0]?.trim().toLowerCase() ?? '';
+  const isHls = isHlsMediaUrl(url) || mime.includes('mpegurl');
+
+  if (isHls) {
     if (isAudio) {
       return null;
     }
-    return createVideoCandidate('m3u8', url, 'network', qualityBonus);
+    const confidence = isTemplateHlsUrl(url) ? 0.95 : qualityBonus;
+    return createVideoCandidate('m3u8', url, 'network', confidence);
   }
 
-  if (/\.mp4(?:\?|$)/i.test(url) || contentType?.includes('video/mp4')) {
+  if (/\.mp4(?:\?|$)/i.test(url) || mime.includes('video/mp4')) {
     if (isAudio) {
       return null;
     }
