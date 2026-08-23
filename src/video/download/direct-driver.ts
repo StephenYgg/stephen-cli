@@ -2,6 +2,7 @@ import { basename, win32 } from 'node:path';
 
 import { SingleBar } from 'cli-progress';
 
+import { applyProxyInit } from '../proxy.js';
 import type { VideoRuntime } from '../runtime.js';
 import { VideoCommandError, type VideoDownloadResult } from '../types.js';
 import { createMediaRequestInit } from './media-request.js';
@@ -11,29 +12,7 @@ async function fetchWithProxy(
   runtime: Pick<VideoRuntime, 'fetch'>,
   options?: { noProxy?: boolean; proxyUrl?: string }
 ): Promise<Awaited<ReturnType<VideoRuntime['fetch']>>> {
-  const init = createMediaRequestInit(url);
-
-  if (options?.noProxy) {
-    return await runtime.fetch(url, init);
-  }
-
-  const proxyUrl = options?.proxyUrl ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY;
-  if (!proxyUrl) {
-    return await runtime.fetch(url, init);
-  }
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // @ts-ignore -- https-proxy-agent uses exports map that NodeNext can't resolve in dynamic import
-    const mod = (await import('https-proxy-agent')) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit any
-    const response = await runtime.fetch(url, { ...init, agent: new mod.HttpsProxyAgent(proxyUrl) } as any);
-    return response;
-  } catch (error) {
-    // Fall back to direct connection
-    console.warn(`[stephen] Proxy connection failed (${proxyUrl}), falling back to direct connection: ${error instanceof Error ? error.message : String(error)}`);
-    return await runtime.fetch(url, init);
-  }
+  return runtime.fetch(url, applyProxyInit(createMediaRequestInit(url), options));
 }
 
 export class DirectVideoDownloadDriver {

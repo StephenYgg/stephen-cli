@@ -2,7 +2,10 @@ import { execFile as nodeExecFile } from 'node:child_process';
 import { writeFile as writeFileOnDisk } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
+import { fetch as undiciFetch } from 'undici';
+
 import { isHlsMediaUrl, isNoiseMediaUrl, isTemplateHlsUrl } from './media-url.js';
+import { resolveProxyUrl } from './proxy.js';
 import { createVideoCandidate, rankVideoCandidates } from './sniff/candidate.js';
 import { VideoCommandError, type VideoCandidate } from './types.js';
 
@@ -52,10 +55,10 @@ export function createDefaultVideoRuntime(): VideoRuntime {
       }
     },
     fetch: async (input, init) => {
-      const response = await fetch(input, init);
-      return response;
+      const response = await undiciFetch(input, init as Parameters<typeof undiciFetch>[1]);
+      return response as unknown as VideoFetchResponse;
     },
-    launchBrowserSniffer: async (url) => sniffWithBrowserRuntime(url),
+    launchBrowserSniffer: async (url, options) => sniffWithBrowserRuntime(url, loadOptionalModule, options),
     writeFile: async (path, data) => {
       await writeFileOnDisk(path, data);
     }
@@ -64,7 +67,8 @@ export function createDefaultVideoRuntime(): VideoRuntime {
 
 export async function sniffWithBrowserRuntime(
   url: string,
-  loadModule: (specifier: string) => Promise<unknown> = loadOptionalModule
+  loadModule: (specifier: string) => Promise<unknown> = loadOptionalModule,
+  options?: { noProxy?: boolean; proxyUrl?: string }
 ): Promise<VideoCandidate[]> {
   let playwright: unknown;
 
@@ -80,7 +84,13 @@ export async function sniffWithBrowserRuntime(
     );
   }
 
-  const chromium = (playwright as { chromium?: { launch: (options: { headless: boolean }) => Promise<unknown> } }).chromium;
+  const chromium = (
+    playwright as {
+      chromium?: {
+        launch: (options: { headless: boolean; proxy?: { server: string } }) => Promise<unknown>;
+      };
+    }
+  ).chromium;
 
   if (!chromium) {
     throw new VideoCommandError(
@@ -92,7 +102,11 @@ export async function sniffWithBrowserRuntime(
     );
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const proxyUrl = resolveProxyUrl(options);
+  const browser = await chromium.launch({
+    headless: true,
+    ...(proxyUrl ? { proxy: { server: proxyUrl } } : {})
+  });
   const candidates: VideoCandidate[] = [];
 
   try {

@@ -32,18 +32,21 @@ export class VideoSniffService {
     }
 
     try {
-      return this.createResult(
-        'browser',
-        options.sourceUrl,
-        await this.browserProvider(options.sourceUrl, providerOptions)
-      );
-    } catch (error) {
-      if (error instanceof Error && 'recoverable' in error && error.recoverable === true) {
-        return this.createResult('http', options.sourceUrl, await this.httpProvider(options.sourceUrl, providerOptions));
+      const candidates = await this.browserProvider(options.sourceUrl, providerOptions);
+      if (candidates.length > 0) {
+        return this.createResult('browser', options.sourceUrl, candidates);
       }
-
-      throw error;
+    } catch (error) {
+      if (!(error instanceof Error && 'recoverable' in error && error.recoverable === true)) {
+        throw error;
+      }
     }
+
+    return this.createResult(
+      'http',
+      options.sourceUrl,
+      await this.httpProvider(options.sourceUrl, providerOptions)
+    );
   }
 
   private createResult(

@@ -142,6 +142,47 @@ describe('HlsVideoDownloadDriver', () => {
     });
   });
 
+  it('attaches a proxy dispatcher to playlist and segment fetches', async () => {
+    const fetchCalls: Array<{ init?: RequestInit; url: string }> = [];
+    const driver = new HlsVideoDownloadDriver({
+      runtime: {
+        fetch: vi.fn(async (input, init) => {
+          const url = String(input);
+          fetchCalls.push({ init, url });
+
+          if (url.endsWith('.m3u8')) {
+            return {
+              ok: true,
+              status: 200,
+              text: async () => '#EXTM3U\n#EXTINF:5,\nseg-a.ts\n',
+              arrayBuffer: async () => new ArrayBuffer(0),
+              headers: new Headers()
+            };
+          }
+
+          return {
+            ok: true,
+            status: 200,
+            text: async () => '',
+            arrayBuffer: async () => Buffer.from('SEG'),
+            headers: new Headers()
+          };
+        }),
+        writeFile: vi.fn(async () => undefined)
+      }
+    });
+
+    await driver.download({
+      proxyUrl: 'http://127.0.0.1:7890',
+      sourceUrl: 'https://cdn.example.com/path/master.m3u8'
+    });
+
+    expect(fetchCalls).toHaveLength(2);
+    for (const call of fetchCalls) {
+      expect((call.init as { dispatcher?: unknown } | undefined)?.dispatcher).toBeDefined();
+    }
+  });
+
   it('surfaces playlist and segment download failures as structured errors', async () => {
     const playlistFailure = new HlsVideoDownloadDriver({
       runtime: {

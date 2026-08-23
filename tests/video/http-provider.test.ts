@@ -51,6 +51,28 @@ describe('HttpVideoSniffProvider', () => {
     });
   });
 
+  it('passes proxy options through to runtime fetch', async () => {
+    const fetch = vi.fn(async () => ({
+      arrayBuffer: async () => new ArrayBuffer(0),
+      headers: new Headers(),
+      ok: true,
+      status: 200,
+      text: async () => '<div>https://cdn.example.com/master.m3u8</div>'
+    }));
+    const provider = new HttpVideoSniffProvider({
+      runtime: { fetch }
+    });
+
+    await provider.sniff('https://example.com/watch', {
+      proxyUrl: 'http://127.0.0.1:7890'
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const fetchCall = fetch.mock.calls[0] as unknown as [string, RequestInit | undefined];
+    expect(fetchCall[0]).toBe('https://example.com/watch');
+    expect((fetchCall[1] as { dispatcher?: unknown } | undefined)?.dispatcher).toBeDefined();
+  });
+
   it('extracts JSON-escaped HLS template urls from player config html', async () => {
     const provider = new HttpVideoSniffProvider({
       runtime: {

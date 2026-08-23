@@ -151,6 +151,45 @@ describe('stephen video command', () => {
     expect(stdout).toContain('"outputPath": "D:/videos/output.mp4"');
   });
 
+  it('forwards --proxy to browser sniff and http sniff', async () => {
+    const runtime = createVideoRuntime();
+    const cli = createCli({
+      repository: new AkRepository(createAkDatabase(':memory:')),
+      stderr: () => undefined,
+      stdout: () => undefined,
+      videoRuntime: runtime
+    });
+
+    await cli.run([
+      'video',
+      'sniff',
+      'https://example.com/watch/1',
+      '--mode',
+      'browser',
+      '--proxy',
+      'http://127.0.0.1:7890'
+    ]);
+    await cli.run([
+      'video',
+      'sniff',
+      'https://example.com/watch/1',
+      '--mode',
+      'http',
+      '--proxy',
+      'http://127.0.0.1:7890'
+    ]);
+
+    expect(runtime.launchBrowserSniffer).toHaveBeenCalledWith('https://example.com/watch/1', {
+      proxyUrl: 'http://127.0.0.1:7890'
+    });
+    expect(runtime.fetch).toHaveBeenCalledWith(
+      'https://example.com/watch/1',
+      expect.objectContaining({
+        dispatcher: expect.anything()
+      })
+    );
+  });
+
   it('renders video command errors as JSON and supports table output for download and compress', async () => {
     let stdout = '';
     let stderr = '';

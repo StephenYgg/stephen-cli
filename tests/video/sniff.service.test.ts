@@ -165,6 +165,45 @@ describe('VideoSniffService', () => {
     expect(browserProvider).toHaveBeenCalledTimes(1);
   });
 
+  it('falls back to http in auto mode when browser sniff returns no candidates', async () => {
+    const httpProvider = vi.fn(async () => [
+      {
+        type: 'm3u8' as const,
+        url: 'https://cdn.example.com/master.m3u8',
+        origin: 'html' as const,
+        mimeType: 'application/vnd.apple.mpegurl',
+        confidence: 0.75
+      }
+    ]);
+    const service = new VideoSniffService({
+      browserProvider: vi.fn(async () => []),
+      httpProvider
+    });
+
+    await expect(
+      service.sniff({
+        mode: 'auto',
+        sourceUrl: 'https://example.com/watch/empty-browser',
+        proxyUrl: 'http://127.0.0.1:7890'
+      })
+    ).resolves.toEqual({
+      candidates: [
+        {
+          confidence: 0.75,
+          mimeType: 'application/vnd.apple.mpegurl',
+          origin: 'html',
+          type: 'm3u8',
+          url: 'https://cdn.example.com/master.m3u8'
+        }
+      ],
+      mode: 'http',
+      sourceUrl: 'https://example.com/watch/empty-browser'
+    });
+    expect(httpProvider).toHaveBeenCalledWith('https://example.com/watch/empty-browser', {
+      proxyUrl: 'http://127.0.0.1:7890'
+    });
+  });
+
   it('passes proxy options in auto mode (browser first, then http fallback)', async () => {
     const browserProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
       expect(options?.noProxy).toBe(true);

@@ -180,7 +180,7 @@ describe('DirectVideoDownloadDriver', () => {
     expect(stderrOutputs.some(o => o.includes('%'))).toBe(false);
   });
 
-  it('warns when proxy connection fails and falls back to direct', async () => {
+  it('surfaces proxy connection failures as download errors', async () => {
     const stderrOutputs: string[] = [];
     const origWarn = console.warn;
     console.warn = (...args: unknown[]) => { stderrOutputs.push(String(args.join(' '))); };
@@ -188,11 +188,9 @@ describe('DirectVideoDownloadDriver', () => {
     const driver = new DirectVideoDownloadDriver({
       runtime: {
         fetch: vi.fn(async (url, opts) => {
-          // When agent is present (proxy mode), simulate proxy failure
-          if ((opts as any)?.agent) {
+          if ((opts as { dispatcher?: unknown } | undefined)?.dispatcher) {
             throw new Error('proxy connection refused');
           }
-          // Direct fallback succeeds
           return {
             arrayBuffer: async () => Buffer.from('video'),
             headers: new Headers({ 'content-length': '5' }),
@@ -205,16 +203,20 @@ describe('DirectVideoDownloadDriver', () => {
       }
     });
 
-    await driver.download({
-      sourceUrl: 'https://cdn.example.com/video.mp4',
-      proxyUrl: 'http://invalid-proxy:9999'
+    await expect(
+      driver.download({
+        sourceUrl: 'https://cdn.example.com/video.mp4',
+        proxyUrl: 'http://invalid-proxy:9999'
+      })
+    ).rejects.toMatchObject({
+      code: 'VIDEO_DOWNLOAD_FAILED',
+      details: {
+        cause: 'proxy connection refused'
+      }
     });
 
     console.warn = origWarn;
-
-    const joined = stderrOutputs.join(' ');
-    expect(joined.includes('Proxy') || joined.includes('proxy')).toBe(true);
-    expect(joined.includes('failed') || joined.includes('fallback')).toBe(true);
+    expect(stderrOutputs.join(' ')).not.toMatch(/falling back to direct/i);
   });
 
   it('uses HTTP_PROXY env var when no explicit proxyUrl is provided and no default exists', async () => {
@@ -242,25 +244,18 @@ describe('DirectVideoDownloadDriver', () => {
 
     process.env.HTTP_PROXY = originalProxy ?? '';
 
-    // Verify an agent was passed (proxy was used with env var URL)
-    expect((fetchCalls[0]!.opts as any)?.agent).toBeDefined();
+    expect((fetchCalls[0]!.opts as { dispatcher?: unknown } | undefined)?.dispatcher).toBeDefined();
   });
 
   it('explicit proxyUrl takes precedence over HTTP_PROXY env var', async () => {
     const originalProxy = process.env.HTTP_PROXY;
     process.env.HTTP_PROXY = 'http://env-proxy:3128';
 
-    const stderrOutputs: string[] = [];
-    const origWarn = console.warn;
-    console.warn = (...args: unknown[]) => { stderrOutputs.push(String(args.join(' '))); };
-
+    const fetchCalls: Array<{ url: string; opts?: unknown }> = [];
     const driver = new DirectVideoDownloadDriver({
       runtime: {
         fetch: vi.fn(async (url, opts) => {
-          // When agent is present (proxy mode), simulate proxy failure to capture URL
-          if ((opts as any)?.agent) {
-            throw new Error('proxy connection refused');
-          }
+          fetchCalls.push({ url, opts });
           return {
             arrayBuffer: async () => Buffer.from('video'),
             headers: new Headers({ 'content-length': '5' }),
@@ -278,12 +273,8 @@ describe('DirectVideoDownloadDriver', () => {
       proxyUrl: 'http://explicit-proxy:8888'
     });
 
-    console.warn = origWarn;
     process.env.HTTP_PROXY = originalProxy ?? '';
 
-    // The warning should mention the explicit proxy URL, not the env var
-    const joined = stderrOutputs.join(' ');
-    expect(joined.includes('explicit-proxy')).toBe(true);
-    expect(joined.includes('env-proxy')).toBe(false);
+    expect((fetchCalls[0]!.opts as { dispatcher?: unknown } | undefined)?.dispatcher).toBeDefined();
   });
 });

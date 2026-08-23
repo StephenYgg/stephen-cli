@@ -1,5 +1,6 @@
 import { basename, extname, win32 } from 'node:path';
 
+import { applyProxyInit } from '../proxy.js';
 import type { VideoRuntime } from '../runtime.js';
 import { VideoCommandError, type VideoDownloadResult } from '../types.js';
 import { createMediaRequestInit } from './media-request.js';
@@ -17,15 +18,16 @@ export class HlsVideoDownloadDriver {
     outputDir?: string;
     outputPath?: string;
     sourceUrl: string;
+    noProxy?: boolean;
+    proxyUrl?: string;
   }): Promise<VideoDownloadResult> {
-    const media = await loadMediaPlaylist(this.runtime, options.sourceUrl);
+    const initFor = (url: string): RequestInit =>
+      applyProxyInit(createMediaRequestInit(url), options);
+    const media = await loadMediaPlaylist(this.runtime, options.sourceUrl, initFor);
     const segmentUrls = parsePlaylistResourceUrls(media.body, media.url);
 
     const chunks = await mapLimit(segmentUrls, HLS_SEGMENT_CONCURRENCY, async (segmentUrl) => {
-      const segmentResponse = await this.runtime.fetch(
-        segmentUrl,
-        createMediaRequestInit(segmentUrl)
-      );
+      const segmentResponse = await this.runtime.fetch(segmentUrl, initFor(segmentUrl));
 
       if (!segmentResponse.ok) {
         throw new VideoCommandError(
@@ -62,25 +64,27 @@ export class HlsVideoDownloadDriver {
 
 async function loadMediaPlaylist(
   runtime: Pick<VideoRuntime, 'fetch'>,
-  sourceUrl: string
+  sourceUrl: string,
+  initFor: (url: string) => RequestInit
 ): Promise<{ body: string; url: string }> {
-  const playlist = await fetchPlaylistText(runtime, sourceUrl);
+  const playlist = await fetchPlaylistText(runtime, sourceUrl, initFor);
   const variantUrl = pickHighestBandwidthVariant(playlist, sourceUrl);
   if (!variantUrl) {
     return { body: playlist, url: sourceUrl };
   }
 
   return {
-    body: await fetchPlaylistText(runtime, variantUrl),
+    body: await fetchPlaylistText(runtime, variantUrl, initFor),
     url: variantUrl
   };
 }
 
 async function fetchPlaylistText(
   runtime: Pick<VideoRuntime, 'fetch'>,
-  url: string
+  url: string,
+  initFor: (url: string) => RequestInit
 ): Promise<string> {
-  const response = await runtime.fetch(url, createMediaRequestInit(url));
+  const response = await runtime.fetch(url, initFor(url));
   if (!response.ok) {
     throw new VideoCommandError(
       'VIDEO_DOWNLOAD_FAILED',

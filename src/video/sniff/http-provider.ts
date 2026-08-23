@@ -1,6 +1,7 @@
-import { extractVideoCandidatesFromText } from './candidate.js';
+import { applyProxyInit } from '../proxy.js';
 import type { VideoRuntime } from '../runtime.js';
 import { VideoCommandError, type VideoCandidate } from '../types.js';
+import { extractVideoCandidatesFromText } from './candidate.js';
 
 export class HttpVideoSniffProvider {
   private readonly runtime: Pick<VideoRuntime, 'fetch'>;
@@ -10,7 +11,7 @@ export class HttpVideoSniffProvider {
   }
 
   async sniff(sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }): Promise<VideoCandidate[]> {
-    const response = await this.runtime.fetch(sourceUrl);
+    const response = await this.runtime.fetch(sourceUrl, applyProxyInit(undefined, options));
 
     if (!response.ok) {
       throw new VideoCommandError(

@@ -118,6 +118,42 @@ describe('createDefaultVideoRuntime', () => {
     ]);
     expect(closeBrowserCalls).toEqual(['context', 'browser']);
     expect(createCandidateFromBrowserResponse('https://cdn.example.com/other.bin', 'application/octet-stream')).toBeNull();
+    const launchArgs: unknown[] = [];
+    await sniffWithBrowserRuntime(
+      'https://example.com/watch',
+      async () => ({
+        chromium: {
+          launch: async (options: unknown) => {
+            launchArgs.push(options);
+            return {
+              close: async () => undefined,
+              newContext: async () => ({
+                close: async () => undefined,
+                newPage: async () => ({
+                  goto: async () => undefined,
+                  on: () => undefined,
+                  waitForTimeout: async () => undefined
+                })
+              })
+            };
+          }
+        }
+      }),
+      { proxyUrl: 'http://127.0.0.1:7890' }
+    );
+    expect(launchArgs).toEqual([
+      {
+        headless: true,
+        proxy: { server: 'http://127.0.0.1:7890' }
+      }
+    ]);
+    await expect(
+      createDefaultVideoRuntime().launchBrowserSniffer('https://example.com/watch', {
+        proxyUrl: 'http://127.0.0.1:7890'
+      })
+    ).rejects.toMatchObject({
+      code: 'VIDEO_BROWSER_UNAVAILABLE'
+    });
     expect(
       createCandidateFromBrowserResponse(
         'https://cdn.example.com/key=abc,end=1/media=hls4A/2026-08/_TPL_.mp4',

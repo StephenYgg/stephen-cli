@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 
+import { resolveProxyUrl } from '../proxy.js';
 import { VideoCommandError, type VideoDownloadResult } from '../types.js';
 
 export class BrowserDownloadDriver {
@@ -7,6 +8,8 @@ export class BrowserDownloadDriver {
     outputDir?: string;
     outputPath?: string;
     sourceUrl: string;
+    noProxy?: boolean;
+    proxyUrl?: string;
   }): Promise<VideoDownloadResult> {
     const outputPath = options.outputPath ?? join(options.outputDir ?? '.', this.inferFileName(options.sourceUrl));
 
@@ -21,7 +24,11 @@ export class BrowserDownloadDriver {
       );
     }
 
-    const browser = await chromium.launch({ headless: true });
+    const proxyUrl = resolveProxyUrl(options);
+    const browser = await chromium.launch({
+      headless: true,
+      ...(proxyUrl ? { proxy: { server: proxyUrl } } : {})
+    });
     try {
       const context = await browser.newContext();
       const page = await context.newPage();
