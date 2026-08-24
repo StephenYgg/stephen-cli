@@ -417,7 +417,7 @@ describe('createCli', () => {
           arrayBuffer: async () => new ArrayBuffer(0),
           headers: new Headers()
         }),
-        launchBrowserSniffer: async () => [],
+        launchBrowserSniffer: async () => ({ candidates: [] }),
         writeFile: async () => undefined
       }
     });

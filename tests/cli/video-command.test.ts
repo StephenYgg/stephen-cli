@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtemp, writeFile as writeFileOnDisk } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { createCli } from '../../src/index.js';
 import { createAkDatabase } from '../../src/ak/database.js';
@@ -47,16 +50,18 @@ function createVideoRuntime(): VideoRuntime {
         })
       };
     }),
-    launchBrowserSniffer: vi.fn(async () => [
-      {
-        type: 'mp4' as const,
-        url: 'https://cdn.example.com/browser.mp4',
-        origin: 'network' as const,
-        mimeType: 'video/mp4',
-        confidence: 0.95
-      }
-    ]),
-    writeFile: vi.fn(async () => undefined)
+    launchBrowserSniffer: vi.fn(async () => ({
+      candidates: [
+        {
+          type: 'mp4' as const,
+          url: 'https://cdn.example.com/browser.mp4',
+          origin: 'network' as const,
+          mimeType: 'video/mp4',
+          confidence: 0.95
+        }
+      ]
+    })),
+    writeFile: vi.fn(async (path, data) => writeFileOnDisk(path, data))
   };
 }
 
@@ -64,6 +69,7 @@ describe('stephen video command', () => {
   it('supports sniff, download, and compress with JSON output by default', async () => {
     let stdout = '';
     let stderr = '';
+    const outputDir = await mkdtemp(join(tmpdir(), 'stephen-cli-video-'));
 
     const cli = createCli({
       repository: new AkRepository(createAkDatabase(':memory:')),
@@ -77,7 +83,13 @@ describe('stephen video command', () => {
     });
 
     const sniffExitCode = await cli.run(['video', 'sniff', 'https://example.com/watch/1']);
-    const downloadExitCode = await cli.run(['video', 'download', 'https://cdn.example.com/master.m3u8']);
+    const downloadExitCode = await cli.run([
+      'video',
+      'download',
+      'https://cdn.example.com/master.m3u8',
+      '--output-dir',
+      outputDir
+    ]);
     const compressExitCode = await cli.run(['video', 'compress', 'D:/videos/input.mov']);
     const compressTableExitCode = await cli.run(['video', 'compress', 'D:/videos/input.mov', '-t']);
 
@@ -88,6 +100,8 @@ describe('stephen video command', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('"mode": "browser"');
     expect(stdout).toContain('"mediaType": "m3u8"');
+    expect(stdout).toContain('"md5":');
+    expect(stdout).toContain('"status": "downloaded"');
     expect(stdout).toContain('"codec": "libx265"');
     expect(stdout).toContain('outputPath');
   });
@@ -193,6 +207,7 @@ describe('stephen video command', () => {
   it('renders video command errors as JSON and supports table output for download and compress', async () => {
     let stdout = '';
     let stderr = '';
+    const outputDir = await mkdtemp(join(tmpdir(), 'stephen-cli-table-'));
 
     const cli = createCli({
       repository: new AkRepository(createAkDatabase(':memory:')),
@@ -218,8 +233,8 @@ describe('stephen video command', () => {
           arrayBuffer: async () => Buffer.from('a'),
           headers: new Headers()
         })),
-        launchBrowserSniffer: vi.fn(async () => []),
-        writeFile: vi.fn(async () => undefined)
+        launchBrowserSniffer: vi.fn(async () => ({ candidates: [] })),
+        writeFile: vi.fn(async (path, data) => writeFileOnDisk(path, data))
       }
     });
 
@@ -228,7 +243,7 @@ describe('stephen video command', () => {
       'download',
       'https://cdn.example.com/master.m3u8',
       '--output-dir',
-      'D:/videos',
+      outputDir,
       '-t'
     ]);
     const compressTableExitCode = await cli.run(['video', 'compress', 'D:/videos/input.mov', '-t']);
@@ -238,6 +253,7 @@ describe('stephen video command', () => {
     expect(compressTableExitCode).toBe(2);
     expect(compressExitCode).toBe(2);
     expect(stdout).toContain('mediaType');
+    expect(stdout).toContain('status');
     expect(stderr).toContain('"code": "VIDEO_FFMPEG_MISSING"');
   });
 });

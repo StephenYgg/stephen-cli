@@ -10,17 +10,26 @@ export interface VideoCandidate {
   url: string;
 }
 
-export interface VideoSniffResult {
+export interface VideoSniffProviderResult {
   candidates: VideoCandidate[];
+  title?: string | undefined;
+}
+
+export interface VideoSniffResult extends VideoSniffProviderResult {
   mode: Exclude<VideoSniffMode, 'auto'>;
   sourceUrl: string;
 }
 
-export interface VideoDownloadResult {
+export interface VideoTransferResult {
   bytesWritten?: number;
   mediaType: VideoCandidateType;
   outputPath: string;
   sourceUrl: string;
+}
+
+export interface VideoDownloadResult extends VideoTransferResult {
+  md5: string;
+  status: 'downloaded' | 'already_downloaded';
 }
 
 export interface VideoCompressionOptions {

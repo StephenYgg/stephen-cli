@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 
 import { resolveProxyUrl } from '../proxy.js';
-import { VideoCommandError, type VideoDownloadResult } from '../types.js';
+import { VideoCommandError, type VideoTransferResult } from '../types.js';
 
 export class BrowserDownloadDriver {
   async download(options: {
@@ -10,7 +10,7 @@ export class BrowserDownloadDriver {
     sourceUrl: string;
     noProxy?: boolean;
     proxyUrl?: string;
-  }): Promise<VideoDownloadResult> {
+  }): Promise<VideoTransferResult> {
     const outputPath = options.outputPath ?? join(options.outputDir ?? '.', this.inferFileName(options.sourceUrl));
 
     const { chromium } = await this.loadPlaywright();

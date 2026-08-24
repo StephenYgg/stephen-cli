@@ -4,7 +4,7 @@ import { SingleBar } from 'cli-progress';
 
 import { applyProxyInit } from '../proxy.js';
 import type { VideoRuntime } from '../runtime.js';
-import { VideoCommandError, type VideoDownloadResult } from '../types.js';
+import { VideoCommandError, type VideoTransferResult } from '../types.js';
 import { createMediaRequestInit } from './media-request.js';
 
 async function fetchWithProxy(
@@ -28,7 +28,7 @@ export class DirectVideoDownloadDriver {
     sourceUrl: string;
     noProxy?: boolean;
     proxyUrl?: string;
-  }): Promise<VideoDownloadResult> {
+  }): Promise<VideoTransferResult> {
     let response: Awaited<ReturnType<DirectVideoDownloadDriver['runtime']['fetch']>>;
 
     try {
@@ -74,7 +74,7 @@ export class DirectVideoDownloadDriver {
 
     const downloadedBytes = buffer.byteLength;
     if (downloadedBytes > 0) {
-      console.error(`Downloaded ${formatBytes(downloadedBytes)} to ${outputPath}`);
+      console.error(`Downloaded ${formatBytes(downloadedBytes)}.`);
     }
 
     return {

@@ -1,10 +1,16 @@
 import { rankVideoCandidates } from './candidate.js';
-import type { VideoCandidate, VideoSniffMode, VideoSniffResult } from '../types.js';
+import type { VideoSniffMode, VideoSniffProviderResult, VideoSniffResult } from '../types.js';
 import { optional } from '../utils.js';
 
 export interface VideoSniffServiceDependencies {
-  browserProvider: (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => Promise<VideoCandidate[]>;
-  httpProvider: (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => Promise<VideoCandidate[]>;
+  browserProvider: (
+    sourceUrl: string,
+    options?: { noProxy?: boolean; proxyUrl?: string }
+  ) => Promise<VideoSniffProviderResult>;
+  httpProvider: (
+    sourceUrl: string,
+    options?: { noProxy?: boolean; proxyUrl?: string }
+  ) => Promise<VideoSniffProviderResult>;
 }
 
 export class VideoSniffService {
@@ -32,9 +38,9 @@ export class VideoSniffService {
     }
 
     try {
-      const candidates = await this.browserProvider(options.sourceUrl, providerOptions);
-      if (candidates.length > 0) {
-        return this.createResult('browser', options.sourceUrl, candidates);
+      const providerResult = await this.browserProvider(options.sourceUrl, providerOptions);
+      if (providerResult.candidates.length > 0) {
+        return this.createResult('browser', options.sourceUrl, providerResult);
       }
     } catch (error) {
       if (!(error instanceof Error && 'recoverable' in error && error.recoverable === true)) {
@@ -52,12 +58,13 @@ export class VideoSniffService {
   private createResult(
     mode: 'browser' | 'http',
     sourceUrl: string,
-    candidates: VideoCandidate[]
+    providerResult: VideoSniffProviderResult
   ): VideoSniffResult {
     return {
-      candidates: rankVideoCandidates(candidates),
+      candidates: rankVideoCandidates(providerResult.candidates),
       mode,
-      sourceUrl
+      sourceUrl,
+      title: providerResult.title
     };
   }
 }

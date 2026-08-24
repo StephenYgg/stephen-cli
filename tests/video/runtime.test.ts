@@ -92,6 +92,7 @@ describe('createDefaultVideoRuntime', () => {
                 on: (_event: 'response', handler: (response: { headers: () => Record<string, string>; url: () => string }) => void) => {
                   recordedHandlers.push(handler);
                 },
+                title: async () => '  Runtime   Title  ',
                 waitForTimeout: async () => undefined
               })
             })
@@ -100,22 +101,25 @@ describe('createDefaultVideoRuntime', () => {
       })
     );
 
-    expect(candidates).toEqual([
-      {
-        confidence: 0,
-        mimeType: 'application/vnd.apple.mpegurl',
-        origin: 'network',
-        type: 'm3u8',
-        url: 'https://cdn.example.com/master.m3u8'
-      },
-      {
-        confidence: 0,
-        mimeType: 'video/mp4',
-        origin: 'network',
-        type: 'mp4',
-        url: 'https://cdn.example.com/video.mp4'
-      }
-    ]);
+    expect(candidates).toEqual({
+      candidates: [
+        {
+          confidence: 0,
+          mimeType: 'application/vnd.apple.mpegurl',
+          origin: 'network',
+          type: 'm3u8',
+          url: 'https://cdn.example.com/master.m3u8'
+        },
+        {
+          confidence: 0,
+          mimeType: 'video/mp4',
+          origin: 'network',
+          type: 'mp4',
+          url: 'https://cdn.example.com/video.mp4'
+        }
+      ],
+      title: 'Runtime Title'
+    });
     expect(closeBrowserCalls).toEqual(['context', 'browser']);
     expect(createCandidateFromBrowserResponse('https://cdn.example.com/other.bin', 'application/octet-stream')).toBeNull();
     const launchArgs: unknown[] = [];
@@ -132,6 +136,7 @@ describe('createDefaultVideoRuntime', () => {
                 newPage: async () => ({
                   goto: async () => undefined,
                   on: () => undefined,
+                  title: async () => '',
                   waitForTimeout: async () => undefined
                 })
               })

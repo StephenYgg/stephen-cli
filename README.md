@@ -244,6 +244,13 @@ Download behavior:
 - Direct `mp4` URLs are downloaded directly.
 - `m3u8` playlists are fetched with their segments and merged into one output.
 - Page URLs are sniffed first, then a compatible candidate is downloaded.
+- Page downloads use the parsed page title as the automatic filename when available. HTTP mode prefers `og:title` and falls back to `<title>`; browser mode uses the final browser page title.
+- Direct media URLs keep their media-derived filename when no page title is available.
+- Downloads are written to a sibling temporary file and hashed with MD5 only after the transfer completes.
+- If the same-title family already contains the same MD5, the temporary file is removed and the result returns the existing path with `status: "already_downloaded"`.
+- If the content differs, filename collisions use `Title (2).ext`, `Title (3).ext`, and so on without overwriting existing files.
+
+Successful download output includes `status`, `md5`, `mediaType`, `outputPath`, and `sourceUrl`. MD5 deduplication happens after transfer; it does not skip the network request before the content is available locally.
 
 ### Compress
 

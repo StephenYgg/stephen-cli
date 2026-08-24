@@ -7,7 +7,8 @@ import { fetch as undiciFetch } from 'undici';
 import { isHlsMediaUrl, isNoiseMediaUrl, isTemplateHlsUrl } from './media-url.js';
 import { resolveProxyUrl } from './proxy.js';
 import { createVideoCandidate, rankVideoCandidates } from './sniff/candidate.js';
-import { VideoCommandError, type VideoCandidate } from './types.js';
+import { normalizeVideoTitle } from './sniff/title.js';
+import { VideoCommandError, type VideoCandidate, type VideoSniffProviderResult } from './types.js';
 
 export interface VideoExecResult {
   code: number;
@@ -27,7 +28,10 @@ export interface VideoFetchResponse {
 export interface VideoRuntime {
   execFile: (file: string, args: string[]) => Promise<VideoExecResult>;
   fetch: (input: string, init?: RequestInit) => Promise<VideoFetchResponse>;
-  launchBrowserSniffer: (url: string, options?: { noProxy?: boolean; proxyUrl?: string }) => Promise<VideoCandidate[]>;
+  launchBrowserSniffer: (
+    url: string,
+    options?: { noProxy?: boolean; proxyUrl?: string }
+  ) => Promise<VideoCandidate[] | VideoSniffProviderResult>;
   writeFile: (path: string, data: Uint8Array) => Promise<void>;
 }
 
@@ -69,7 +73,7 @@ export async function sniffWithBrowserRuntime(
   url: string,
   loadModule: (specifier: string) => Promise<unknown> = loadOptionalModule,
   options?: { noProxy?: boolean; proxyUrl?: string }
-): Promise<VideoCandidate[]> {
+): Promise<VideoSniffProviderResult> {
   let playwright: unknown;
 
   try {
@@ -108,6 +112,7 @@ export async function sniffWithBrowserRuntime(
     ...(proxyUrl ? { proxy: { server: proxyUrl } } : {})
   });
   const candidates: VideoCandidate[] = [];
+  let title: string | undefined;
 
   try {
     const context = await (browser as {
@@ -119,6 +124,7 @@ export async function sniffWithBrowserRuntime(
             headers: () => Record<string, string>;
             url: () => string;
           }) => void) => void;
+          title: () => Promise<string>;
           waitForTimeout: (value: number) => Promise<void>;
         }>;
       }>;
@@ -135,12 +141,16 @@ export async function sniffWithBrowserRuntime(
 
     await page.goto(url, { waitUntil: 'load' });
     await page.waitForTimeout(60000);
+    title = normalizeVideoTitle(await page.title());
     await context.close();
   } finally {
     await (browser as { close: () => Promise<void> }).close();
   }
 
-  return rankVideoCandidates(candidates);
+  return {
+    candidates: rankVideoCandidates(candidates),
+    title
+  };
 }
 
 const loadOptionalModule = new Function(

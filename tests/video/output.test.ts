@@ -33,13 +33,16 @@ describe('video output helpers', () => {
         status: 404
       })
     ).toContain('"status": 404');
-    expect(
-      renderVideoDownloadResultAsJson({
-        mediaType: 'mp4',
-        outputPath: 'D:\\videos\\video.mp4',
-        sourceUrl: 'https://cdn.example.com/video.mp4'
-      })
-    ).toContain('"mediaType": "mp4"');
+    const downloadJson = renderVideoDownloadResultAsJson({
+      md5: '0123456789abcdef0123456789abcdef',
+      mediaType: 'mp4',
+      outputPath: 'D:\\videos\\video.mp4',
+      sourceUrl: 'https://cdn.example.com/video.mp4',
+      status: 'already_downloaded'
+    });
+    expect(downloadJson).toContain('"mediaType": "mp4"');
+    expect(downloadJson).toContain('"md5": "0123456789abcdef0123456789abcdef"');
+    expect(downloadJson).toContain('"status": "already_downloaded"');
     expect(
       renderVideoCompressionResultAsJson({
         audioBitrate: '64k',

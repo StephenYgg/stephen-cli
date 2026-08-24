@@ -8,6 +8,7 @@ import { DirectVideoDownloadDriver } from './download/direct-driver.js';
 import { HlsVideoDownloadDriver } from './download/hls-driver.js';
 import { BrowserDownloadDriver } from './download/browser-driver.js';
 import { VideoDownloadService } from './download/service.js';
+import { VideoDownloadFileManager } from './download/file-manager.js';
 import { VideoCompressionService } from './compress/service.js';
 import {
   renderVideoCandidatesAsJson,
@@ -72,6 +73,7 @@ export function registerVideoCommands(
     hlsDriver: new HlsVideoDownloadDriver({
       runtime: dependencies.runtime
     }),
+    fileManager: new VideoDownloadFileManager(),
     sniffService,
     browserDriver
   });
@@ -125,8 +127,10 @@ export function registerVideoCommands(
         dependencies.stdout(
           `${renderVideoOperationAsTable([
             ['field', 'value'],
+            ['status', result.status],
             ['mediaType', result.mediaType],
-            ['outputPath', result.outputPath]
+            ['outputPath', result.outputPath],
+            ['md5', result.md5]
           ])}\n`
         );
         return;

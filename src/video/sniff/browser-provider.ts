@@ -1,5 +1,5 @@
 import type { VideoRuntime } from '../runtime.js';
-import type { VideoCandidate } from '../types.js';
+import type { VideoSniffProviderResult } from '../types.js';
 
 export class BrowserVideoSniffProvider {
   private readonly runtime: Pick<VideoRuntime, 'launchBrowserSniffer'>;
@@ -8,7 +8,11 @@ export class BrowserVideoSniffProvider {
     this.runtime = dependencies.runtime;
   }
 
-  sniff(sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }): Promise<VideoCandidate[]> {
-    return this.runtime.launchBrowserSniffer(sourceUrl, options);
+  async sniff(
+    sourceUrl: string,
+    options?: { noProxy?: boolean; proxyUrl?: string }
+  ): Promise<VideoSniffProviderResult> {
+    const result = await this.runtime.launchBrowserSniffer(sourceUrl, options);
+    return Array.isArray(result) ? { candidates: result } : result;
   }
 }

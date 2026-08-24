@@ -2,7 +2,7 @@ import { basename, extname, win32 } from 'node:path';
 
 import { applyProxyInit } from '../proxy.js';
 import type { VideoRuntime } from '../runtime.js';
-import { VideoCommandError, type VideoDownloadResult } from '../types.js';
+import { VideoCommandError, type VideoTransferResult } from '../types.js';
 import { createMediaRequestInit } from './media-request.js';
 
 const HLS_SEGMENT_CONCURRENCY = 8;
@@ -20,7 +20,7 @@ export class HlsVideoDownloadDriver {
     sourceUrl: string;
     noProxy?: boolean;
     proxyUrl?: string;
-  }): Promise<VideoDownloadResult> {
+  }): Promise<VideoTransferResult> {
     const initFor = (url: string): RequestInit =>
       applyProxyInit(createMediaRequestInit(url), options);
     const media = await loadMediaPlaylist(this.runtime, options.sourceUrl, initFor);

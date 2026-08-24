@@ -10,15 +10,18 @@ describe('VideoSniffService', () => {
         recoverable: true
       });
     });
-    const httpProvider = vi.fn(async () => [
-      {
-        type: 'm3u8' as const,
-        url: 'https://cdn.example.com/master.m3u8',
-        origin: 'html' as const,
-        mimeType: 'application/vnd.apple.mpegurl',
-        confidence: 0.75
-      }
-    ]);
+    const httpProvider = vi.fn(async () => ({
+      candidates: [
+        {
+          type: 'm3u8' as const,
+          url: 'https://cdn.example.com/master.m3u8',
+          origin: 'html' as const,
+          mimeType: 'application/vnd.apple.mpegurl',
+          confidence: 0.75
+        }
+      ],
+      title: 'Fallback Title'
+    }));
     const service = new VideoSniffService({
       browserProvider,
       httpProvider
@@ -40,7 +43,8 @@ describe('VideoSniffService', () => {
         }
       ],
       mode: 'http',
-      sourceUrl: 'https://example.com/watch/1'
+      sourceUrl: 'https://example.com/watch/1',
+      title: 'Fallback Title'
     });
     expect(browserProvider).toHaveBeenCalledTimes(1);
     expect(httpProvider).toHaveBeenCalledTimes(1);
@@ -48,16 +52,19 @@ describe('VideoSniffService', () => {
 
   it('returns browser candidates directly in browser mode', async () => {
     const service = new VideoSniffService({
-      browserProvider: vi.fn(async () => [
-        {
-          type: 'mp4' as const,
-          url: 'https://cdn.example.com/video.mp4',
-          origin: 'network' as const,
-          mimeType: 'video/mp4',
-          confidence: 0.9
-        }
-      ]),
-      httpProvider: vi.fn(async () => [])
+      browserProvider: vi.fn(async () => ({
+        candidates: [
+          {
+            type: 'mp4' as const,
+            url: 'https://cdn.example.com/video.mp4',
+            origin: 'network' as const,
+            mimeType: 'video/mp4',
+            confidence: 0.9
+          }
+        ],
+        title: 'Browser Title'
+      })),
+      httpProvider: vi.fn(async () => ({ candidates: [] }))
     });
 
     await expect(
@@ -76,13 +83,14 @@ describe('VideoSniffService', () => {
         }
       ],
       mode: 'browser',
-      sourceUrl: 'https://example.com/watch/2'
+      sourceUrl: 'https://example.com/watch/2',
+      title: 'Browser Title'
     });
   });
 
   it('uses the http provider directly in http mode', async () => {
-    const browserProvider = vi.fn(async () => []);
-    const httpProvider = vi.fn(async () => []);
+    const browserProvider = vi.fn(async () => ({ candidates: [] }));
+    const httpProvider = vi.fn(async () => ({ candidates: [] }));
     const service = new VideoSniffService({
       browserProvider,
       httpProvider
@@ -110,7 +118,7 @@ describe('VideoSniffService', () => {
           recoverable: false
         });
       }),
-      httpProvider: vi.fn(async () => [])
+      httpProvider: vi.fn(async () => ({ candidates: [] }))
     });
 
     await expect(
@@ -127,10 +135,10 @@ describe('VideoSniffService', () => {
     const httpProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
       expect(options?.noProxy).toBe(true);
       expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
-      return [];
+      return { candidates: [] };
     });
     const service = new VideoSniffService({
-      browserProvider: vi.fn(async () => []),
+      browserProvider: vi.fn(async () => ({ candidates: [] })),
       httpProvider
     });
 
@@ -148,11 +156,11 @@ describe('VideoSniffService', () => {
     const browserProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
       expect(options?.noProxy).toBe(true);
       expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
-      return [];
+      return { candidates: [] };
     });
     const service = new VideoSniffService({
       browserProvider,
-      httpProvider: vi.fn(async () => [])
+      httpProvider: vi.fn(async () => ({ candidates: [] }))
     });
 
     await service.sniff({
@@ -166,17 +174,19 @@ describe('VideoSniffService', () => {
   });
 
   it('falls back to http in auto mode when browser sniff returns no candidates', async () => {
-    const httpProvider = vi.fn(async () => [
-      {
-        type: 'm3u8' as const,
-        url: 'https://cdn.example.com/master.m3u8',
-        origin: 'html' as const,
-        mimeType: 'application/vnd.apple.mpegurl',
-        confidence: 0.75
-      }
-    ]);
+    const httpProvider = vi.fn(async () => ({
+      candidates: [
+        {
+          type: 'm3u8' as const,
+          url: 'https://cdn.example.com/master.m3u8',
+          origin: 'html' as const,
+          mimeType: 'application/vnd.apple.mpegurl',
+          confidence: 0.75
+        }
+      ]
+    }));
     const service = new VideoSniffService({
-      browserProvider: vi.fn(async () => []),
+      browserProvider: vi.fn(async () => ({ candidates: [] })),
       httpProvider
     });
 
@@ -213,7 +223,7 @@ describe('VideoSniffService', () => {
     const httpProvider = vi.fn(async (sourceUrl: string, options?: { noProxy?: boolean; proxyUrl?: string }) => {
       expect(options?.noProxy).toBe(true);
       expect(options?.proxyUrl).toBe('http://proxy.example.com:8080');
-      return [];
+      return { candidates: [] };
     });
     const service = new VideoSniffService({ browserProvider, httpProvider });
 

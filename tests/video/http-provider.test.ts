@@ -17,22 +17,25 @@ describe('HttpVideoSniffProvider', () => {
       }
     });
 
-    await expect(provider.sniff('https://example.com/watch')).resolves.toEqual([
-      {
-        confidence: 0.75,
-        mimeType: 'application/vnd.apple.mpegurl',
-        origin: 'html',
-        type: 'm3u8',
-        url: 'https://cdn.example.com/master.m3u8'
-      },
-      {
-        confidence: 0.75,
-        mimeType: 'video/mp4',
-        origin: 'html',
-        type: 'mp4',
-        url: 'https://cdn.example.com/video.mp4'
-      }
-    ]);
+    await expect(provider.sniff('https://example.com/watch')).resolves.toEqual({
+      candidates: [
+        {
+          confidence: 0.75,
+          mimeType: 'application/vnd.apple.mpegurl',
+          origin: 'html',
+          type: 'm3u8',
+          url: 'https://cdn.example.com/master.m3u8'
+        },
+        {
+          confidence: 0.75,
+          mimeType: 'video/mp4',
+          origin: 'html',
+          type: 'mp4',
+          url: 'https://cdn.example.com/video.mp4'
+        }
+      ],
+      title: undefined
+    });
 
     const failingProvider = new HttpVideoSniffProvider({
       runtime: {
@@ -87,15 +90,37 @@ describe('HttpVideoSniffProvider', () => {
       }
     });
 
-    await expect(provider.sniff('https://example.com/watch')).resolves.toEqual([
-      {
-        confidence: 0.95,
-        mimeType: 'application/vnd.apple.mpegurl',
-        origin: 'html',
-        type: 'm3u8',
-        url: 'https://cdn.example.com/key=abc/media=hls4A/2026-08/_TPL_.mp4'
+    await expect(provider.sniff('https://example.com/watch')).resolves.toEqual({
+      candidates: [
+        {
+          confidence: 0.95,
+          mimeType: 'application/vnd.apple.mpegurl',
+          origin: 'html',
+          type: 'm3u8',
+          url: 'https://cdn.example.com/key=abc/media=hls4A/2026-08/_TPL_.mp4'
+        }
+      ],
+      title: undefined
+    });
+  });
+
+  it('returns the normalized page title with candidates', async () => {
+    const provider = new HttpVideoSniffProvider({
+      runtime: {
+        fetch: vi.fn(async () => ({
+          arrayBuffer: async () => new ArrayBuffer(0),
+          headers: new Headers(),
+          ok: true,
+          status: 200,
+          text: async () =>
+            '<meta property="og:title" content="  Page   Title  "><video src="https://cdn.example.com/video.mp4"></video>'
+        }))
       }
-    ]);
+    });
+
+    await expect(provider.sniff('https://example.com/watch')).resolves.toMatchObject({
+      title: 'Page Title'
+    });
   });
 });
 
